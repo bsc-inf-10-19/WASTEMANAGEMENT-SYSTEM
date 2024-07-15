@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -42,6 +43,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -263,6 +269,7 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit) {
         }
     }
 }
+
 @Composable
 fun HomeScreen(navController: NavHostController) {
     Column(
@@ -304,13 +311,12 @@ fun HomeScreen(navController: NavHostController) {
     }
 }
 
-
 @Composable
 fun HomeScreenItem(imageRes: Int, text: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-           // .background(MaterialTheme.colorScheme.secondary, shape = CircleShape)
+            // .background(MaterialTheme.colorScheme.secondary, shape = CircleShape)
             .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -395,12 +401,24 @@ fun AnalyticsScreen() {
 
 @Composable
 fun BinLocationScreen() {
-    Box(
-        contentAlignment = Alignment.Center,
+    val context = LocalContext.current
+    AndroidView(
+        factory = {
+            Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+            MapView(context).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                controller.setZoom(15.0)
+                controller.setCenter(GeoPoint(-34.0, 151.0))
+                val marker = Marker(this).apply {
+                    position = GeoPoint(-34.0, 151.0)
+                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    title = "Bin Location"
+                }
+                overlays.add(marker)
+            }
+        },
         modifier = Modifier.fillMaxSize()
-    ) {
-        Text(text = "Bin Location Screen", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-    }
+    )
 }
 
 fun showNotification(context: Context, level: Int) {
