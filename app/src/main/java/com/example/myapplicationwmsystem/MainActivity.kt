@@ -109,14 +109,8 @@ fun AppNavigation() {
         composable("home_screen") {
             HomeScreen(navController)
         }
-        composable("garbage_level_screen") {
-            GarbageLevelScreen()
-        }
-        composable("analytics_screen") {
-            AnalyticsScreen()
-        }
-        composable("bin_location_screen") {
-            BinLocationScreen()
+        composable("bin_detail_screen/{binId}") { backStackEntry ->
+            BinDetailScreen(backStackEntry.arguments?.getString("binId") ?: "")
         }
     }
 }
@@ -272,6 +266,12 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit) {
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
+    val bins = listOf(
+        Bin("1", "Bin 1\nChikanda", R.drawable.bin_profile),
+        Bin("2", "Bin 2\nMatawale", R.drawable.bin_profile),
+        Bin("3", "Bin 3\nMpondabwino", R.drawable.bin_profile)
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -289,25 +289,17 @@ fun HomeScreen(navController: NavHostController) {
                 text = "Smart Waste Management",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White //
+                color = Color.White
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        HomeScreenItem(
-            imageRes = R.drawable.bin_profile,
-            text = "Bin Level",
-            onClick = { navController.navigate("garbage_level_screen") }
-        )
-        HomeScreenItem(
-            imageRes = R.drawable.analytics_profile,
-            text = "Analytics",
-            onClick = { navController.navigate("analytics_screen") }
-        )
-        HomeScreenItem(
-            imageRes = R.drawable.location_profile,
-            text = "Bin Location",
-            onClick = { navController.navigate("bin_location_screen") }
-        )
+        bins.forEach { bin ->
+            HomeScreenItem(
+                imageRes = bin.imageRes,
+                text = bin.name,
+                onClick = { navController.navigate("bin_detail_screen/${bin.id}") }
+            )
+        }
     }
 }
 
@@ -316,7 +308,6 @@ fun HomeScreenItem(imageRes: Int, text: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // .background(MaterialTheme.colorScheme.secondary, shape = CircleShape)
             .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -331,8 +322,33 @@ fun HomeScreenItem(imageRes: Int, text: String, onClick: () -> Unit) {
     }
 }
 
+data class Bin(val id: String, val name: String, val imageRes: Int)
+
 @Composable
-fun GarbageLevelScreen() {
+fun BinDetailScreen(binId: String) {
+    val tabs = listOf("Bin Level", "Analytics", "Location")
+    var selectedTabIndex by remember { mutableStateOf(0) }
+
+    Column {
+        TabRow(selectedTabIndex = selectedTabIndex) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTabIndex == index,
+                    onClick = { selectedTabIndex = index },
+                    text = { Text(title) }
+                )
+            }
+        }
+        when (selectedTabIndex) {
+            0 -> GarbageLevelScreen(binId)
+            1 -> AnalyticsScreen(binId)
+            2 -> BinLocationScreen(binId)
+        }
+    }
+}
+
+@Composable
+fun GarbageLevelScreen(binId: String) {
     var garbageLevel by remember { mutableStateOf(0) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -341,7 +357,7 @@ fun GarbageLevelScreen() {
         coroutineScope.launch {
             while (true) {
                 try {
-                    garbageLevel = fetchGarbageLevelFromThingSpeak()
+                    garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
                     if (garbageLevel > 80) {
                         showNotification(context, garbageLevel)
                     }
@@ -367,7 +383,7 @@ fun GarbageLevelScreen() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Garbage Level",
+            text = "Garbage Level - Bin $binId",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -390,17 +406,17 @@ fun GarbageLevelScreen() {
 }
 
 @Composable
-fun AnalyticsScreen() {
+fun AnalyticsScreen(binId: String) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize()
     ) {
-        Text(text = "Analytics Screen", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(text = "Analytics Screen - Bin $binId", fontSize = 24.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
-fun BinLocationScreen() {
+fun BinLocationScreen(binId: String) {
     val context = LocalContext.current
     AndroidView(
         factory = {
@@ -412,7 +428,7 @@ fun BinLocationScreen() {
                 val marker = Marker(this).apply {
                     position = GeoPoint(-34.0, 151.0)
                     setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    title = "Bin Location"
+                    title = "Bin Location - Bin $binId"
                 }
                 overlays.add(marker)
             }
@@ -432,9 +448,9 @@ fun showNotification(context: Context, level: Int) {
     }
 }
 
-suspend fun fetchGarbageLevelFromThingSpeak(): Int {
+suspend fun fetchGarbageLevelFromThingSpeak(binId: String): Int {
     val apiKey = "H8M68IKI5A3QYVET"
-    val channelId = "2595920"
+    val channelId = "2595920" // Update this with the respective bin's channel ID
     val url = URL("https://api.thingspeak.com/channels/$channelId/feeds.json?api_key=$apiKey&results=1")
     return withContext(Dispatchers.IO) {
         (url.openConnection() as? HttpURLConnection)?.run {
