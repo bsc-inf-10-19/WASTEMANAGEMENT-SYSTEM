@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +39,13 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import com.example.myapplicationwmsystem.ui.theme.MyApplicationWMsystemTheme
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.Description
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.formatter.ValueFormatter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -407,11 +415,63 @@ fun GarbageLevelScreen(binId: String) {
 
 @Composable
 fun AnalyticsScreen(binId: String) {
+    // State to hold data entries for the chart
+    var dataEntries by remember { mutableStateOf(mutableListOf<Entry>()) }
+    var entryIndex by remember { mutableStateOf(1f) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        coroutineScope.launch {
+            while (true) {
+                try {
+                    val garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
+                    val timestamp = System.currentTimeMillis()
+                    dataEntries.add(Entry(entryIndex, garbageLevel.toFloat(), timestamp))
+                    entryIndex += 1
+                    // Limit entries to a reasonable number to avoid performance issues
+                    if (dataEntries.size > 30) {
+                        dataEntries.removeAt(0)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace() // Log the exception
+                }
+                delay(30000)
+            }
+        }
+    }
+
+    LineChartView(entries = dataEntries)
+}
+
+
+@Composable
+fun LineChartView(entries: List<Entry>) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = Modifier.fillMaxSize()
     ) {
-        Text(text = "Analytics Screen - Bin $binId", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        AndroidView(
+            factory = { context ->
+                LineChart(context).apply {
+                    val lineDataSet = LineDataSet(entries, "Garbage Level").apply {
+                        color = Color.Green.toArgb()
+                        valueTextColor = Color.Black.toArgb()
+                        lineWidth = 2f
+                    }
+                    data = LineData(lineDataSet)
+                    description.isEnabled = false
+                    xAxis.isEnabled = false
+                    axisRight.isEnabled = false
+                    legend.isEnabled = false
+                    setTouchEnabled(true)
+                    setPinchZoom(true)
+                    invalidate()
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(300.dp) // Set the desired size for the chart
+        )
     }
 }
 
