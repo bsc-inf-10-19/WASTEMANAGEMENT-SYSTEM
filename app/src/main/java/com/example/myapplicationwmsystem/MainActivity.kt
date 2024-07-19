@@ -777,21 +777,33 @@ fun SearchScreen(bins: List<Bin>, onBinClick: (Bin) -> Unit) {
         }
     }
 }
-
 @Composable
 fun MapScreen(bins: List<Bin>) {
     val context = LocalContext.current
+
+    // Zomba, Malawi coordinates
+    val zombaLatitude = -15.3833
+    val zombaLongitude = 35.3333
+
     AndroidView(
         factory = {
             Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
             MapView(context).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
-                controller.setZoom(15.0)
-                controller.setCenter(GeoPoint(-34.0, 151.0)) // Default center, adjust as needed
+                controller.setZoom(14.0)
+                controller.setCenter(GeoPoint(zombaLatitude, zombaLongitude))
 
-                bins.forEach { bin ->
+                bins.forEachIndexed { index, bin ->
                     val marker = Marker(this).apply {
-                        position = GeoPoint(-34.0 + Math.random() * 0.1, 151.0 + Math.random() * 0.1) // Random positions for demo
+                        if (index == 0) {
+                            // Bin 1 - Place it in a different location, e.g., Blantyre
+                            position = GeoPoint(-15.7861, 35.0058)
+                        } else {
+                            // Other bins - Random positions around Zomba
+                            val latOffset = (Math.random() - 0.5) * 0.05 // Approx. 5km radius
+                            val lonOffset = (Math.random() - 0.5) * 0.05
+                            position = GeoPoint(zombaLatitude + latOffset, zombaLongitude + lonOffset)
+                        }
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                         title = bin.name
                     }
