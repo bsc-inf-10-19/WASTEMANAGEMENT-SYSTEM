@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation("androidx.navigation:navigation-compose:2.4.0-alpha10")
     implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+    implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
