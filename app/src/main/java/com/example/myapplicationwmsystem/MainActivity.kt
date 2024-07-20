@@ -904,14 +904,6 @@ fun MapScreen(bins: List<Bin>) {
             }) {
                 Text("Zoom Out")
             }
-            Button(onClick = {
-                // Replace with actual current location retrieval logic
-                val currentLatitude = -15.3850
-                val currentLongitude = 35.3340
-                mapViewState.value?.controller?.animateTo(GeoPoint(currentLatitude, currentLongitude), 18.0, 1000L)
-            }) {
-                Text("Current Location")
-            }
         }
     }
 }
