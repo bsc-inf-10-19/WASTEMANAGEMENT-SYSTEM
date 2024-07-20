@@ -20,6 +20,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,12 +35,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.FractionalThreshold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.rememberSwipeableState
+import androidx.compose.material.swipeable
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -67,12 +72,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -101,6 +108,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
 
@@ -431,29 +439,69 @@ fun HomeScreen(navController: NavHostController, bins: SnapshotStateList<Bin>) {
     }
 }
 
-
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun HomeScreenItem(imageRes: Int, text: String, onClick: () -> Unit, onDelete: () -> Unit) {
-    Row(
+fun HomeScreenItem(
+    imageRes: Int,
+    text: String,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var isRevealed by remember { mutableStateOf(false) }
+    val revealThreshold = 75.dp
+    val revealState = rememberSwipeableState(initialValue = 0)
+    val sizePx = with(LocalDensity.current) { revealThreshold.toPx() }
+    val anchors = mapOf(0f to 0, -sizePx to 1)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .swipeable(
+                state = revealState,
+                anchors = anchors,
+                thresholds = { _, _ -> FractionalThreshold(0.5f) },
+                orientation = Orientation.Horizontal
+            )
     ) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = null,
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-        Spacer(modifier = Modifier.weight(1f))
-        IconButton(onClick = { onDelete() }) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete Bin")
+        // Delete action background
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(Color.Red)
+                .padding(end = 16.dp),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+
+        }
+
+        // Main content
+        Row(
+            modifier = Modifier
+                .offset { IntOffset(revealState.offset.value.roundToInt(), 0) }
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = null,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+
+    LaunchedEffect(revealState.currentValue) {
+        if (revealState.currentValue == 1) {
+            onDelete()
+            revealState.animateTo(0)
         }
     }
 }
+
 
 @Composable
 fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> Unit) {
@@ -747,7 +795,7 @@ fun LineChartView(entries: List<Entry>) {
             },
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(300.dp) 
+                .size(300.dp)
         )
     }
 }
