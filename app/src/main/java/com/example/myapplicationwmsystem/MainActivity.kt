@@ -747,7 +747,7 @@ fun LineChartView(entries: List<Entry>) {
             },
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(300.dp) // Set the desired size for the chart
+                .size(300.dp) 
         )
     }
 }
@@ -776,21 +776,21 @@ fun SearchScreen(bins: List<Bin>, onBinClick: (Bin) -> Unit) {
             }
         }
     }
-}
-@Composable
+}@Composable
 fun MapScreen(bins: List<Bin>) {
     val context = LocalContext.current
+    val mapViewState = remember { mutableStateOf<MapView?>(null) }
 
     // Zomba, Malawi coordinates
     val zombaLatitude = -15.3833
     val zombaLongitude = 35.3333
 
     AndroidView(
-        factory = {
-            Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-            MapView(context).apply {
+        factory = { ctx ->
+            Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+            MapView(ctx).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
-                controller.setZoom(14.0)
+                controller.setZoom(18.0)
                 controller.setCenter(GeoPoint(zombaLatitude, zombaLongitude))
 
                 bins.forEachIndexed { index, bin ->
@@ -806,13 +806,38 @@ fun MapScreen(bins: List<Bin>) {
                         }
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                         title = bin.name
+
+                        // Add click listener to the marker
+                        setOnMarkerClickListener { _, _ ->
+                            // Animate to the marker position and zoom in
+                            controller.animateTo(position, 20.0, 1000L)
+                            true
+                        }
                     }
                     overlays.add(marker)
                 }
+                mapViewState.value = this
             }
         },
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        update = { mapView ->
+            mapViewState.value = mapView
+        }
     )
+
+    // Add a button to reset the zoom and center
+    Box(modifier = Modifier.fillMaxSize()) {
+        Button(
+            onClick = {
+                mapViewState.value?.controller?.animateTo(GeoPoint(zombaLatitude, zombaLongitude), 14.0, 1000L)
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Text("Reset View")
+        }
+    }
 }
 
 @Composable
