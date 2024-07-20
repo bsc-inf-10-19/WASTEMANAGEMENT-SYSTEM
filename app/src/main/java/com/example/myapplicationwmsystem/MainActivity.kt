@@ -93,9 +93,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myapplicationwmsystem.ui.theme.MyApplicationWMsystemTheme
 import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.components.XAxis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -108,7 +109,15 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.net.HttpURLConnection
 import java.net.URL
+<<<<<<< HEAD
 import kotlin.math.roundToInt
+=======
+import com.github.mikephil.charting.formatter.ValueFormatter
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
+
+>>>>>>> ac47cac3e9117b3e1dd4df8327b93d3f4fc4e449
 
 class MainActivity : ComponentActivity() {
 
@@ -740,8 +749,7 @@ fun GarbageLevelScreen(binId: String) {
 
 @Composable
 fun AnalyticsScreen(binId: String) {
-    // State to hold data entries for the chart
-    var dataEntries by remember { mutableStateOf(mutableListOf<Entry>()) }
+    val dataEntries = remember { mutableStateListOf<ChartEntry>() }
     var entryIndex by remember { mutableStateOf(1f) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -751,9 +759,8 @@ fun AnalyticsScreen(binId: String) {
                 try {
                     val garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
                     val timestamp = System.currentTimeMillis()
-                    dataEntries.add(Entry(entryIndex, garbageLevel.toFloat(), timestamp))
+                    dataEntries.add(ChartEntry(entryIndex, garbageLevel.toFloat(), timestamp))
                     entryIndex += 1
-                    // Limit entries to a reasonable number to avoid performance issues
                     if (dataEntries.size > 30) {
                         dataEntries.removeAt(0)
                     }
@@ -768,36 +775,79 @@ fun AnalyticsScreen(binId: String) {
     LineChartView(entries = dataEntries)
 }
 
-
 @Composable
-fun LineChartView(entries: List<Entry>) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        AndroidView(
-            factory = { context ->
-                LineChart(context).apply {
-                    val lineDataSet = LineDataSet(entries, "Garbage Level").apply {
-                        color = Color.Green.toArgb()
-                        valueTextColor = Color.Black.toArgb()
-                        lineWidth = 2f
+fun LineChartView(entries: List<ChartEntry>) {
+    AndroidView(
+        factory = { context ->
+            LineChart(context).apply {
+                setDrawGridBackground(false)
+                isDragEnabled = true
+                isScaleXEnabled = true
+                isScaleYEnabled = true
+                setPinchZoom(true)
+
+                // Configure X Axis
+                xAxis.apply {
+                    position = XAxis.XAxisPosition.BOTTOM
+                    setDrawGridLines(true)
+                    setDrawAxisLine(true)
+                    setDrawLabels(true)
+                    granularity = 1f
+                    labelRotationAngle = -45f
+                    textColor = Color.Red.toArgb()
+                    valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            val timestamp = value.toLong()
+                            return SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(timestamp))
+                        }
                     }
-                    data = LineData(lineDataSet)
-                    description.isEnabled = false
-                    xAxis.isEnabled = false
-                    axisRight.isEnabled = false
-                    legend.isEnabled = false
-                    setTouchEnabled(true)
-                    setPinchZoom(true)
-                    invalidate()
                 }
+<<<<<<< HEAD
             },
             modifier = Modifier
                 .align(Alignment.Center)
                 .size(300.dp)
         )
     }
+=======
+
+                // Configure Y Axis
+                axisLeft.apply {
+                    setDrawGridLines(true)
+                    setDrawAxisLine(true)
+                    setDrawLabels(true)
+                    textColor = Color.Red.toArgb()
+                    valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            return "${value.toInt()}%" // Display as percentage
+                        }
+                    }
+                }
+                axisRight.isEnabled = false
+
+                // Create LineDataSet
+                val lineDataSet = LineDataSet(entries.map { Entry(it.timestamp.toFloat(), it.garbageLevel) }, "Garbage Level").apply {
+                    color = Color.Blue.toArgb()
+                    valueTextColor = Color.Black.toArgb()
+                    valueTextSize = 10f
+                    setDrawFilled(true)
+                    setDrawCircles(true)
+                    circleColors = listOf(Color.Red.toArgb())
+                }
+
+                // Create LineData
+                val lineData = LineData(lineDataSet)
+                data = lineData
+
+                // Animate chart
+                animateY(5000)
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    )
+>>>>>>> ac47cac3e9117b3e1dd4df8327b93d3f4fc4e449
 }
 @Composable
 fun SearchScreen(bins: List<Bin>, onBinClick: (Bin) -> Unit) {
@@ -921,6 +971,9 @@ fun showNotification(context: Context, level: Int) {
     }
 }
 
+// Data class to hold the entry
+data class ChartEntry(val x: Float, val garbageLevel: Float, val timestamp: Long)
+
 suspend fun fetchGarbageLevelFromThingSpeak(binId: String): Int {
     val apiKey = "H8M68IKI5A3QYVET"
     val channelId = "2595920" // Update this with the respective bin's channel ID
@@ -943,7 +996,6 @@ suspend fun fetchGarbageLevelFromThingSpeak(binId: String): Int {
         } ?: 0
     }
 }
-
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
