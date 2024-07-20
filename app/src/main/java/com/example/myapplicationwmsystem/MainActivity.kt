@@ -20,6 +20,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,12 +35,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.FractionalThreshold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.rememberSwipeableState
+import androidx.compose.material.swipeable
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
@@ -67,12 +72,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -101,6 +108,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
 
@@ -325,7 +333,8 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit) {
             }
         }
     }
-}@Composable
+}
+@Composable
 fun HomeScreen(navController: NavHostController, bins: SnapshotStateList<Bin>) {
     var showDialog by remember { mutableStateOf(false) }
     var binToDelete by remember { mutableStateOf<Bin?>(null) }
@@ -365,7 +374,7 @@ fun HomeScreen(navController: NavHostController, bins: SnapshotStateList<Bin>) {
                             .padding(vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(5.dp))
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -431,29 +440,69 @@ fun HomeScreen(navController: NavHostController, bins: SnapshotStateList<Bin>) {
     }
 }
 
-
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun HomeScreenItem(imageRes: Int, text: String, onClick: () -> Unit, onDelete: () -> Unit) {
-    Row(
+fun HomeScreenItem(
+    imageRes: Int,
+    text: String,
+    onClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var isRevealed by remember { mutableStateOf(false) }
+    val revealThreshold = 75.dp
+    val revealState = rememberSwipeableState(initialValue = 0)
+    val sizePx = with(LocalDensity.current) { revealThreshold.toPx() }
+    val anchors = mapOf(0f to 0, -sizePx to 1)
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .swipeable(
+                state = revealState,
+                anchors = anchors,
+                thresholds = { _, _ -> FractionalThreshold(0.5f) },
+                orientation = Orientation.Horizontal
+            )
     ) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = null,
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-        Spacer(modifier = Modifier.weight(1f))
-        IconButton(onClick = { onDelete() }) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete Bin")
+        // Delete action background
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(Color.Red)
+                .padding(end = 16.dp),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+
+        }
+
+        // Main content
+        Row(
+            modifier = Modifier
+                .offset { IntOffset(revealState.offset.value.roundToInt(), 0) }
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = null,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+
+    LaunchedEffect(revealState.currentValue) {
+        if (revealState.currentValue == 1) {
+            onDelete()
+            revealState.animateTo(0)
         }
     }
 }
+
 
 @Composable
 fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> Unit) {
@@ -747,7 +796,7 @@ fun LineChartView(entries: List<Entry>) {
             },
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(300.dp) 
+                .size(300.dp)
         )
     }
 }
@@ -780,10 +829,9 @@ fun SearchScreen(bins: List<Bin>, onBinClick: (Bin) -> Unit) {
 fun MapScreen(bins: List<Bin>) {
     val context = LocalContext.current
     val mapViewState = remember { mutableStateOf<MapView?>(null) }
-
-    // Zomba, Malawi coordinates
     val zombaLatitude = -15.3833
     val zombaLongitude = 35.3333
+    val selectedBinName = remember { mutableStateOf<String?>(null) }
 
     AndroidView(
         factory = { ctx ->
@@ -796,21 +844,18 @@ fun MapScreen(bins: List<Bin>) {
                 bins.forEachIndexed { index, bin ->
                     val marker = Marker(this).apply {
                         if (index == 0) {
-                            // Bin 1 - Place it in a different location, e.g., Blantyre
                             position = GeoPoint(-15.7861, 35.0058)
                         } else {
-                            // Other bins - Random positions around Zomba
-                            val latOffset = (Math.random() - 0.5) * 0.05 // Approx. 5km radius
+                            val latOffset = (Math.random() - 0.5) * 0.05
                             val lonOffset = (Math.random() - 0.5) * 0.05
                             position = GeoPoint(zombaLatitude + latOffset, zombaLongitude + lonOffset)
                         }
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                         title = bin.name
 
-                        // Add click listener to the marker
                         setOnMarkerClickListener { _, _ ->
-                            // Animate to the marker position and zoom in
                             controller.animateTo(position, 20.0, 1000L)
+                            selectedBinName.value = bin.name
                             true
                         }
                     }
@@ -825,17 +870,48 @@ fun MapScreen(bins: List<Bin>) {
         }
     )
 
-    // Add a button to reset the zoom and center
     Box(modifier = Modifier.fillMaxSize()) {
-        Button(
-            onClick = {
-                mapViewState.value?.controller?.animateTo(GeoPoint(zombaLatitude, zombaLongitude), 14.0, 1000L)
-            },
+        selectedBinName.value?.let { binName ->
+            Text(
+                text = binName,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(16.dp)
+            )
+        }
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.End,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
         ) {
-            Text("Reset View")
+            Button(onClick = {
+                mapViewState.value?.controller?.animateTo(GeoPoint(zombaLatitude, zombaLongitude), 14.0, 1000L)
+            }) {
+                Text("Reset View")
+            }
+            Button(onClick = {
+                mapViewState.value?.controller?.zoomIn()
+            }) {
+                Text("Zoom In")
+            }
+            Button(onClick = {
+                mapViewState.value?.controller?.zoomOut()
+            }) {
+                Text("Zoom Out")
+            }
+            Button(onClick = {
+                // Replace with actual current location retrieval logic
+                val currentLatitude = -15.3850
+                val currentLongitude = 35.3340
+                mapViewState.value?.controller?.animateTo(GeoPoint(currentLatitude, currentLongitude), 18.0, 1000L)
+            }) {
+                Text("Current Location")
+            }
         }
     }
 }
