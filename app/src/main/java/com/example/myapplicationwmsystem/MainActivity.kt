@@ -18,9 +18,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,19 +33,23 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.FractionalThreshold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.rememberSwipeableState
-import androidx.compose.material.swipeable
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,16 +74,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
@@ -93,9 +91,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myapplicationwmsystem.ui.theme.MyApplicationWMsystemTheme
 import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.components.XAxis
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -108,7 +107,13 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.math.roundToInt
+import com.github.mikephil.charting.formatter.ValueFormatter
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.Date
+import android.util.Log
+import androidx.compose.ui.unit.DpOffset
+
 
 class MainActivity : ComponentActivity() {
 
@@ -151,6 +156,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
@@ -334,13 +340,54 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit) {
         }
     }
 }
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavHostController, bins: SnapshotStateList<Bin>) {
+fun MyTopAppBar() {
+    TopAppBar(
+        title = {
+            Text(
+                text = "Waste Management",
+                color = Color.White
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = { /* Handle navigation icon press */ }) {
+                Icon(
+                    Icons.Filled.Menu,
+                    contentDescription = "Menu",
+                    tint = Color.White
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = { /* Handle notification icon press */ }) {
+                Icon(
+                    Icons.Filled.Notifications,
+                    contentDescription = "Notifications",
+                    tint = Color.White
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color(0xFF1A73E8)
+        )
+    )
+}
+
+@ExperimentalMaterial3Api
+@Composable
+fun HomeScreen(
+    navController: NavHostController,
+    bins: SnapshotStateList<Bin>
+) {
     var showDialog by remember { mutableStateOf(false) }
     var binToDelete by remember { mutableStateOf<Bin?>(null) }
     var selectedItem by remember { mutableStateOf(0) }
 
     Scaffold(
+        topBar = {
+            MyTopAppBar()
+        },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
@@ -362,33 +409,27 @@ fun HomeScreen(navController: NavHostController, bins: SnapshotStateList<Bin>) {
                     onClick = { selectedItem = 2 }
                 )
             }
-        }
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showDialog = true }
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Add Bin")
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
     ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(innerPadding)) {
             when (selectedItem) {
                 0 -> {
-                    // Home content
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Spacer(modifier = Modifier.height(5.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(MaterialTheme.colorScheme.primary)
-                                .padding(14.dp)
-                        ) {
-                            Text(
-                                text = "Smart Waste Management",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
                         bins.forEach { bin ->
                             HomeScreenItem(
                                 imageRes = bin.imageRes,
@@ -405,42 +446,30 @@ fun HomeScreen(navController: NavHostController, bins: SnapshotStateList<Bin>) {
                 2 -> MapScreen(bins = bins)
             }
 
-            if (selectedItem == 0) {
-                FloatingActionButton(
-                    onClick = { showDialog = true },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 16.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Bin")
-                }
+            if (showDialog) {
+                AddBinDialog(
+                    onDismiss = { showDialog = false },
+                    onAddBinSuccess = { newBin ->
+                        bins.add(newBin)
+                        showDialog = false
+                    }
+                )
+            }
+
+            binToDelete?.let { bin ->
+                DeleteBinDialog(
+                    bin = bin,
+                    onDismiss = { binToDelete = null },
+                    onDeleteBinSuccess = {
+                        bins.remove(bin)
+                        binToDelete = null
+                    }
+                )
             }
         }
     }
-
-    if (showDialog) {
-        AddBinDialog(
-            onDismiss = { showDialog = false },
-            onAddBinSuccess = { newBin ->
-                bins.add(newBin)
-                showDialog = false
-            }
-        )
-    }
-
-    binToDelete?.let { bin ->
-        DeleteBinDialog(
-            bin = bin,
-            onDismiss = { binToDelete = null },
-            onDeleteBinSuccess = {
-                bins.remove(bin)
-                binToDelete = null
-            }
-        )
-    }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreenItem(
     imageRes: Int,
@@ -448,61 +477,82 @@ fun HomeScreenItem(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
-    var isRevealed by remember { mutableStateOf(false) }
-    val revealThreshold = 75.dp
-    val revealState = rememberSwipeableState(initialValue = 0)
-    val sizePx = with(LocalDensity.current) { revealThreshold.toPx() }
-    val anchors = mapOf(0f to 0, -sizePx to 1)
+    var expanded by remember { mutableStateOf(false) }
 
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .swipeable(
-                state = revealState,
-                anchors = anchors,
-                thresholds = { _, _ -> FractionalThreshold(0.5f) },
-                orientation = Orientation.Horizontal
-            )
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Delete action background
-        Box(
-            Modifier
-                .matchParentSize()
-                .background(Color.Red)
-                .padding(end = 16.dp),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-
-        }
-
-        // Main content
-        Row(
-            modifier = Modifier
-                .offset { IntOffset(revealState.offset.value.roundToInt(), 0) }
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = null,
-                modifier = Modifier.size(48.dp)
+        Image(
+            painter = painterResource(id = imageRes),
+            contentDescription = null,
+            modifier = Modifier.size(48.dp)
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.weight(1f))
+        Box {
+            IconButton(onClick = { expanded = true }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "More options")
+            }
+            DeleteDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                onDelete = {
+                    onDelete()
+                    expanded = false
+                }
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-        }
-    }
-
-    LaunchedEffect(revealState.currentValue) {
-        if (revealState.currentValue == 1) {
-            onDelete()
-            revealState.animateTo(0)
         }
     }
 }
 
+@Composable
+fun DeleteDropdownMenu(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    onDelete: () -> Unit
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        offset = DpOffset(x = (-16).dp, y = 0.dp)
+    ) {
+        DeleteDropdownMenuItem(onDelete)
+    }
+}
+
+@Composable
+fun ColumnScope.DeleteDropdownMenuItem(onDelete: () -> Unit) {
+    DropdownMenuItem(onClick = {
+        onDelete()
+    }) {
+        Text("Delete")
+    }
+}
+
+@Composable
+fun DropdownMenuItem(
+    onClick: () -> Unit,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+    content: @Composable RowScope.() -> Unit
+) {
+    val modifier = Modifier
+        .fillMaxWidth()
+        .clickable(
+            onClick = onClick,
+            interactionSource = interactionSource,
+            indication = rememberRipple(bounded = true)
+        )
+        .padding(16.dp)
+
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        content()
+    }
+}
 
 @Composable
 fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> Unit) {
@@ -658,12 +708,52 @@ fun AddBinScreen(onAddBinSuccess: (Bin) -> Unit) {
 }
 data class Bin(val id: String, val name: String, val imageRes: Int)
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyTopAppBar(title: String, onNavigationClick: () -> Unit = {}, onNotificationClick: () -> Unit = {}) {
+    TopAppBar(
+        title = {
+            Text(
+                text = title,
+                color = Color.White
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = onNavigationClick) {
+                Icon(
+                    Icons.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.White
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = onNotificationClick) {
+                Icon(
+                    Icons.Filled.Notifications,
+                    contentDescription = "Notifications",
+                    tint = Color.White
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color(0xFF1A73E8)
+        )
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BinDetailScreen(binId: String) {
     val tabs = listOf("Bin Level", "Analytics", "Location")
     var selectedTabIndex by remember { mutableStateOf(0) }
 
     Column {
+        MyTopAppBar(
+            title = "Bin Detail",
+            onNavigationClick = { /* Handle navigation icon press */ },
+            onNotificationClick = { /* Handle notification icon press */ }
+        )
         TabRow(selectedTabIndex = selectedTabIndex) {
             tabs.forEachIndexed { index, title ->
                 Tab(
@@ -741,8 +831,7 @@ fun GarbageLevelScreen(binId: String) {
 
 @Composable
 fun AnalyticsScreen(binId: String) {
-    // State to hold data entries for the chart
-    var dataEntries by remember { mutableStateOf(mutableListOf<Entry>()) }
+    val dataEntries = remember { mutableStateListOf<ChartEntry>() }
     var entryIndex by remember { mutableStateOf(1f) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -752,14 +841,15 @@ fun AnalyticsScreen(binId: String) {
                 try {
                     val garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
                     val timestamp = System.currentTimeMillis()
-                    dataEntries.add(Entry(entryIndex, garbageLevel.toFloat(), timestamp))
+                    Log.d("AnalyticsScreen", "Fetched data: Garbage Level: $garbageLevel, Timestamp: $timestamp")
+
+                    dataEntries.add(ChartEntry(entryIndex, garbageLevel.toFloat(), timestamp))
                     entryIndex += 1
-                    // Limit entries to a reasonable number to avoid performance issues
                     if (dataEntries.size > 30) {
                         dataEntries.removeAt(0)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace() // Log the exception
+                    e.printStackTrace()
                 }
                 delay(30000)
             }
@@ -767,39 +857,86 @@ fun AnalyticsScreen(binId: String) {
     }
 
     LineChartView(entries = dataEntries)
-}
 
+//    val testEntries = listOf(
+//        ChartEntry(1f, 20f, System.currentTimeMillis() - 30000 * 5), // 5 minutes ago
+//        ChartEntry(2f, 30f, System.currentTimeMillis() - 30000 * 4), // 4 minutes ago
+//        ChartEntry(3f, 25f, System.currentTimeMillis() - 30000 * 3), // 3 minutes ago
+//        ChartEntry(4f, 40f, System.currentTimeMillis() - 30000 * 2), // 2 minutes ago
+//        ChartEntry(5f, 35f, System.currentTimeMillis() - 30000)      // 1 minute ago
+//    )
+//
+//    // Pass static data to LineChartView
+//    LineChartView(entries = testEntries)
+}
 
 @Composable
-fun LineChartView(entries: List<Entry>) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier.fillMaxSize()
-    ) {
-        AndroidView(
-            factory = { context ->
-                LineChart(context).apply {
-                    val lineDataSet = LineDataSet(entries, "Garbage Level").apply {
-                        color = Color.Green.toArgb()
-                        valueTextColor = Color.Black.toArgb()
-                        lineWidth = 2f
+fun LineChartView(entries: List<ChartEntry>) {
+    AndroidView(
+        factory = { context ->
+            LineChart(context).apply {
+                setDrawGridBackground(false)
+                isDragEnabled = true
+                isScaleXEnabled = true
+                isScaleYEnabled = true
+                setPinchZoom(true)
+
+                xAxis.apply {
+                    position = XAxis.XAxisPosition.BOTTOM
+                    setDrawGridLines(true)
+                    setDrawAxisLine(true)
+                    setDrawLabels(true)
+                    granularity = 1f
+                    labelRotationAngle = -45f
+                    textColor = Color.Red.toArgb()
+                    valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            val chartEntry = entries.find { it.x == value }
+                            return if (chartEntry != null) {
+                                SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(chartEntry.timestamp))
+                            } else {
+                                value.toString()
+                            }
+                        }
                     }
-                    data = LineData(lineDataSet)
-                    description.isEnabled = false
-                    xAxis.isEnabled = false
-                    axisRight.isEnabled = false
-                    legend.isEnabled = false
-                    setTouchEnabled(true)
-                    setPinchZoom(true)
-                    invalidate()
                 }
-            },
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(300.dp)
-        )
-    }
+
+                axisLeft.apply {
+                    setDrawGridLines(true)
+                    setDrawAxisLine(true)
+                    setDrawLabels(true)
+                    textColor = Color.Red.toArgb()
+                    valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            return "${value.toInt()}%"
+                        }
+                    }
+                }
+                axisRight.isEnabled = false
+
+                val lineDataSet = LineDataSet(entries.map { Entry(it.x, it.garbageLevel) }, "Garbage Level").apply {
+                    color = Color.Blue.toArgb()
+                    valueTextColor = Color.Black.toArgb()
+                    valueTextSize = 10f
+                    setDrawFilled(true)
+                    setDrawCircles(true)
+                    circleColors = listOf(Color.Red.toArgb())
+                }
+
+                val lineData = LineData(lineDataSet)
+                data = lineData
+
+                animateY(5000)
+            }
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    )
 }
+
+data class ChartEntry(val x: Float, val garbageLevel: Float, val timestamp: Long)
+
 @Composable
 fun SearchScreen(bins: List<Bin>, onBinClick: (Bin) -> Unit) {
     var searchQuery by remember { mutableStateOf("") }
@@ -931,13 +1068,28 @@ fun BinLocationScreen(binId: String) {
 }
 
 fun showNotification(context: Context, level: Int) {
-    val builder = NotificationCompat.Builder(context, "GARBAGE_ALERT_CHANNEL")
-        .setSmallIcon(R.drawable.ic_notification)
-        .setContentTitle("Garbage Level Alert")
-        .setContentText("Garbage level is at $level%")
-        .setPriority(NotificationCompat.PRIORITY_HIGH)
-    with(NotificationManagerCompat.from(context)) {
-        notify(1, builder.build())
+    val channelId = "GARBAGE_ALERT_CHANNEL"
+    val notificationManager = NotificationManagerCompat.from(context)
+
+    when {
+        level > 70 -> {
+            val builder = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Garbage Level Alert")
+                .setContentText("Garbage level is critically high at $level%. Please take action.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setAutoCancel(true)
+            notificationManager.notify(1, builder.build())
+        }
+        level in 30..70 -> {
+            val builder = NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Garbage Level Advisory")
+                .setContentText("Garbage level is at $level%. Consider taking action soon.")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+            notificationManager.notify(2, builder.build())
+        }
     }
 }
 
