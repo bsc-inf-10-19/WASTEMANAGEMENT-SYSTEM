@@ -113,6 +113,7 @@ import java.util.Locale
 import java.util.Date
 import android.util.Log
 import androidx.compose.ui.unit.DpOffset
+import androidx.navigation.NavController
 
 
 class MainActivity : ComponentActivity() {
@@ -180,7 +181,10 @@ fun AppNavigation() {
             HomeScreen(navController, bins)
         }
         composable("bin_detail_screen/{binId}") { backStackEntry ->
-            BinDetailScreen(backStackEntry.arguments?.getString("binId") ?: "")
+            BinDetailScreen(
+                binId = backStackEntry.arguments?.getString("binId") ?: "",
+                navController = navController
+            )
         }
         composable("add_bin_screen") {
             AddBinScreen(onAddBinSuccess = { newBin ->
@@ -342,7 +346,7 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit) {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyTopAppBar() {
+fun MyTopAppBar(context: Context, garbageLevel: Int) {
     TopAppBar(
         title = {
             Text(
@@ -351,7 +355,9 @@ fun MyTopAppBar() {
             )
         },
         actions = {
-            IconButton(onClick = { /* Handle notification icon press */ }) {
+            IconButton(onClick = {
+                handleNotificationClick(context, garbageLevel)
+            }) {
                 Icon(
                     Icons.Filled.Notifications,
                     contentDescription = "Notifications",
@@ -365,6 +371,9 @@ fun MyTopAppBar() {
     )
 }
 
+private fun handleNotificationClick(context: Context, garbageLevel: Int) {
+    showNotification(context, garbageLevel)
+}
 @ExperimentalMaterial3Api
 @Composable
 fun HomeScreen(
@@ -374,10 +383,24 @@ fun HomeScreen(
     var showDialog by remember { mutableStateOf(false) }
     var binToDelete by remember { mutableStateOf<Bin?>(null) }
     var selectedItem by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+    val garbageLevel = remember { mutableStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        val binId = "your-bin-id" // Replace with the actual bin ID
+        while (true) {
+            try {
+                garbageLevel.value = fetchGarbageLevelFromThingSpeak(binId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            delay(3000)
+        }
+    }
 
     Scaffold(
         topBar = {
-            MyTopAppBar()
+            MyTopAppBar(context = context, garbageLevel = garbageLevel.value)
         },
         bottomBar = {
             NavigationBar {
@@ -699,9 +722,17 @@ fun AddBinScreen(onAddBinSuccess: (Bin) -> Unit) {
 }
 data class Bin(val id: String, val name: String, val imageRes: Int)
 
+fun navigateBack(navController: NavController) {
+    navController.popBackStack()
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyTopAppBar(title: String, onNavigationClick: () -> Unit = {}, onNotificationClick: () -> Unit = {}) {
+fun MyTopAppBar(
+    title: String,
+    onNavigationClick: () -> Unit = {},
+    onNotificationClick: () -> Unit = {}
+) {
     TopAppBar(
         title = {
             Text(
@@ -732,18 +763,17 @@ fun MyTopAppBar(title: String, onNavigationClick: () -> Unit = {}, onNotificatio
         )
     )
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BinDetailScreen(binId: String) {
+fun BinDetailScreen(binId: String,  navController: NavController) {
     val tabs = listOf("Bin Level", "Analytics", "Location")
     var selectedTabIndex by remember { mutableStateOf(0) }
 
     Column {
         MyTopAppBar(
             title = "Bin Detail",
-            onNavigationClick = { /* Handle navigation icon press */ },
-            onNotificationClick = { /* Handle notification icon press */ }
+            onNavigationClick = { navigateBack(navController) },
+            onNotificationClick = { }
         )
         TabRow(selectedTabIndex = selectedTabIndex) {
             tabs.forEachIndexed { index, title ->
