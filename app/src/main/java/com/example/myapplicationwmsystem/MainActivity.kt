@@ -350,15 +350,6 @@ fun MyTopAppBar() {
                 color = Color.White
             )
         },
-        navigationIcon = {
-            IconButton(onClick = { /* Handle navigation icon press */ }) {
-                Icon(
-                    Icons.Filled.Menu,
-                    contentDescription = "Menu",
-                    tint = Color.White
-                )
-            }
-        },
         actions = {
             IconButton(onClick = { /* Handle notification icon press */ }) {
                 Icon(
