@@ -55,6 +55,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation( "androidx.compose.ui:ui:1.6.8")
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation ("androidx.compose.material:material:1.4.3")
     implementation ("androidx.compose.ui:ui-tooling-preview:1.4.3")
     implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")

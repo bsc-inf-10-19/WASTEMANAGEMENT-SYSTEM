@@ -854,7 +854,8 @@ fun GarbageLevelScreen(binId: String) {
             color = MaterialTheme.colorScheme.secondary
         )
     }
-}
+}data class ChartEntry(val index: Float, val value: Float, val timestamp: Long)
+
 @Composable
 fun AnalyticsScreen(binId: String) {
     val dataEntries = remember { mutableStateListOf<ChartEntry>() }
@@ -867,8 +868,6 @@ fun AnalyticsScreen(binId: String) {
                 try {
                     val garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
                     val timestamp = System.currentTimeMillis()
-                    Log.d("AnalyticsScreen", "Fetched data: Garbage Level: $garbageLevel, Timestamp: $timestamp")
-
                     dataEntries.add(ChartEntry(entryIndex, garbageLevel.toFloat(), timestamp))
                     entryIndex += 1
                     if (dataEntries.size > 30) {
@@ -877,91 +876,53 @@ fun AnalyticsScreen(binId: String) {
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                delay(30000)
+                delay(10000)
             }
         }
     }
 
     LineChartView(entries = dataEntries)
-
-//    val testEntries = listOf(
-//        ChartEntry(1f, 20f, System.currentTimeMillis() - 30000 * 5), // 5 minutes ago
-//        ChartEntry(2f, 30f, System.currentTimeMillis() - 30000 * 4), // 4 minutes ago
-//        ChartEntry(3f, 25f, System.currentTimeMillis() - 30000 * 3), // 3 minutes ago
-//        ChartEntry(4f, 40f, System.currentTimeMillis() - 30000 * 2), // 2 minutes ago
-//        ChartEntry(5f, 35f, System.currentTimeMillis() - 30000)      // 1 minute ago
-//    )
-//
-//    // Pass static data to LineChartView
-//    LineChartView(entries = testEntries)
 }
 
 @Composable
 fun LineChartView(entries: List<ChartEntry>) {
+    val context = LocalContext.current
+
     AndroidView(
-        factory = { context ->
-            LineChart(context).apply {
-                setDrawGridBackground(false)
-                isDragEnabled = true
-                isScaleXEnabled = true
-                isScaleYEnabled = true
-                setPinchZoom(true)
-
-                xAxis.apply {
-                    position = XAxis.XAxisPosition.BOTTOM
-                    setDrawGridLines(true)
-                    setDrawAxisLine(true)
-                    setDrawLabels(true)
-                    granularity = 1f
-                    labelRotationAngle = -45f
-                    textColor = Color.Red.toArgb()
-                    valueFormatter = object : ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String {
-                            val chartEntry = entries.find { it.x == value }
-                            return if (chartEntry != null) {
-                                SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(chartEntry.timestamp))
-                            } else {
-                                value.toString()
-                            }
-                        }
-                    }
-                }
-
-                axisLeft.apply {
-                    setDrawGridLines(true)
-                    setDrawAxisLine(true)
-                    setDrawLabels(true)
-                    textColor = Color.Red.toArgb()
-                    valueFormatter = object : ValueFormatter() {
-                        override fun getFormattedValue(value: Float): String {
-                            return "${value.toInt()}%"
-                        }
-                    }
-                }
+        modifier = Modifier.fillMaxSize(),
+        factory = { ctx ->
+            LineChart(ctx).apply {
+                description.isEnabled = false
+                xAxis.valueFormatter = TimeAxisFormatter()
+                axisLeft.axisMinimum = 0f
                 axisRight.isEnabled = false
-
-                val lineDataSet = LineDataSet(entries.map { Entry(it.x, it.garbageLevel) }, "Garbage Level").apply {
-                    color = Color.Blue.toArgb()
-                    valueTextColor = Color.Black.toArgb()
-                    valueTextSize = 10f
-                    setDrawFilled(true)
-                    setDrawCircles(true)
-                    circleColors = listOf(Color.Red.toArgb())
-                }
-
-                val lineData = LineData(lineDataSet)
-                data = lineData
-
-                animateY(5000)
+                legend.isEnabled = true
+                setTouchEnabled(true)
+                setPinchZoom(true)
             }
         },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(300.dp)
+        update = { chart ->
+            val lineEntries = entries.map { Entry(it.index, it.value) }
+            val lineDataSet = LineDataSet(lineEntries, "Bin Level").apply {
+                setDrawValues(false)
+                setDrawCircles(true)
+                lineWidth = 2f
+                setDrawFilled(true)
+            }
+            chart.data = LineData(lineDataSet)
+            chart.invalidate() // Refresh the chart
+        }
     )
 }
 
-data class ChartEntry(val x: Float, val garbageLevel: Float, val timestamp: Long)
+class TimeAxisFormatter : com.github.mikephil.charting.formatter.ValueFormatter() {
+    private val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
+
+    override fun getFormattedValue(value: Float): String {
+        return sdf.format(Date(value.toLong()))
+    }
+}
+
 
 @Composable
 fun SearchScreen(bins: List<Bin>, onBinClick: (Bin) -> Unit) {
@@ -1015,7 +976,6 @@ fun MapScreen(bins: List<Bin>) {
                         }
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
                         title = bin.name
-
                         setOnMarkerClickListener { _, _ ->
                             controller.animateTo(position, 20.0, 1000L)
                             selectedBinName.value = bin.name
@@ -1044,7 +1004,6 @@ fun MapScreen(bins: List<Bin>) {
                     .padding(16.dp)
             )
         }
-
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.End,
@@ -1106,15 +1065,6 @@ fun showNotification(context: Context, level: Int) {
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
             notificationManager.notify(1, builder.build())
-        }
-        level in 30..70 -> {
-            val builder = NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Garbage Level Advisory")
-                .setContentText("Garbage level is at $level%. Consider taking action soon.")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-            notificationManager.notify(2, builder.build())
         }
     }
 }
