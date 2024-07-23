@@ -81,6 +81,8 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.os.Handler
+import android.os.Looper
 
 class MainActivity : ComponentActivity() {
 
@@ -365,7 +367,13 @@ fun showNotification(context: Context, level: Int) {
                 .setContentText("Garbage level is critically high at $level%. Please take action.")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
-            notificationManager.notify(1, builder.build())
+
+            val notificationId = 1
+            notificationManager.notify(notificationId, builder.build())
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                notificationManager.cancel(notificationId)
+            }, 5000)
         }
     }
 }
