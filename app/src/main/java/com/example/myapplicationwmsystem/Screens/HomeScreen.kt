@@ -37,7 +37,6 @@ import com.example.myapplicationwmsystem.fetchGarbageLevelFromThingSpeak
 import kotlinx.coroutines.delay
 
 
-@ExperimentalMaterial3Api
 @Composable
 fun HomeScreen(
     navController: NavHostController,
@@ -45,6 +44,7 @@ fun HomeScreen(
 ) {
     var showDialog by remember { mutableStateOf(false) }
     var binToDelete by remember { mutableStateOf<Bin?>(null) }
+    var binToEdit by remember { mutableStateOf<Bin?>(null) }
     var selectedItem by remember { mutableStateOf(0) }
     val context = LocalContext.current
     val garbageLevel = remember { mutableStateOf(0) }
@@ -88,10 +88,12 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showDialog = true }
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Bin")
+            if (selectedItem == 0) {
+                FloatingActionButton(
+                    onClick = { showDialog = true }
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add Bin")
+                }
             }
         },
         floatingActionButtonPosition = FabPosition.End
