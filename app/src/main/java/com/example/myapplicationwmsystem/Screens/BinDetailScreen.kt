@@ -11,20 +11,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavController
-import com.example.myapplicationwmsystem.MyTopAppBar
-
+import com.example.myapplicationwmsystem.Components.MyTopAppBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BinDetailScreen(binId: String,  navController: NavController) {
+fun BinDetailScreen(binId: String, navController: NavController) {
     val tabs = listOf("Bin Level", "Analytics", "Location")
     var selectedTabIndex by remember { mutableStateOf(0) }
+
 
     Column {
         MyTopAppBar(
             title = "Bin Detail",
-            onNavigationClick = { navigateBack(navController) },
-            onNotificationClick = { }
+            onNavigationClick = { navController.popBackStack() },
+            onNotificationClick = {}
         )
         TabRow(selectedTabIndex = selectedTabIndex) {
             tabs.forEachIndexed { index, title ->
@@ -41,8 +41,4 @@ fun BinDetailScreen(binId: String,  navController: NavController) {
             2 -> BinLocationScreen(binId)
         }
     }
-}
-
-fun MyTopAppBar(title: String, onNavigationClick: () -> Unit, onNotificationClick: () -> Unit) {
-
 }
