@@ -15,15 +15,29 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import com.example.myapplicationwmsystem.Components.HomeScreenItem
+import com.example.myapplicationwmsystem.Components.MyTopAppBar
 
 
 @Composable
-fun SearchScreen(bins: List<Bin>, onBinClick: (Bin) -> Unit) {
+fun SearchScreen( bins: List<Bin>,
+                  onBinClick: (Bin) -> Unit,
+                  navController: NavController
+) {
     var searchQuery by remember { mutableStateOf("") }
     val filteredBins = bins.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        MyTopAppBar(
+            title = "Search Bins",
+            onNavigationClick = {
+                navController.navigate("home_screen") {
+                    popUpTo("home_screen") { inclusive = false }
+                }
+            },
+            onNotificationClick = { }
+        )
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },

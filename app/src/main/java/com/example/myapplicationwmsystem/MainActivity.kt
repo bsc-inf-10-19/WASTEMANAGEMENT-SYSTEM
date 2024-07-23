@@ -83,6 +83,7 @@ import java.util.Date
 import java.util.Locale
 import android.os.Handler
 import android.os.Looper
+import com.example.myapplicationwmsystem.Screens.SearchScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -147,6 +148,15 @@ fun AppNavigation() {
         }
         composable("home_screen") {
             HomeScreen(navController, bins)
+        }
+        composable("search_screen") {
+            SearchScreen(
+                bins = bins,
+                onBinClick = { bin ->
+                    navController.navigate("bin_detail_screen/${bin.id}")
+                },
+                navController = navController
+            )
         }
         composable("bin_detail_screen/{binId}") { backStackEntry ->
             BinDetailScreen(

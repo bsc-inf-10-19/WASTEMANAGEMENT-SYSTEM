@@ -63,7 +63,9 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-            MyTopAppBar(context = context, garbageLevel = garbageLevel.value)
+           if (selectedItem == 0) {
+               MyTopAppBar(context = context, garbageLevel = garbageLevel.value)
+           }
         },
         bottomBar = {
             NavigationBar {
@@ -119,9 +121,13 @@ fun HomeScreen(
                         }
                     }
                 }
-                1 -> SearchScreen(bins = bins) { bin ->
-                    navController.navigate("bin_detail_screen/${bin.id}")
-                }
+                1 -> SearchScreen(
+                    bins = bins,
+                    onBinClick = { bin ->
+                        navController.navigate("bin_detail_screen/${bin.id}")
+                    },
+                    navController = navController
+                )
                 2 -> MapScreen(bins = bins)
             }
 
