@@ -29,7 +29,6 @@ import com.example.myapplicationwmsystem.showNotification
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
 @Composable
 fun GarbageLevelScreen(binId: String) {
     var garbageLevel by remember { mutableStateOf(0) }
@@ -45,17 +44,17 @@ fun GarbageLevelScreen(binId: String) {
                         showNotification(context, garbageLevel)
                     }
                 } catch (e: Exception) {
-                    e.printStackTrace() // Log the exception
+                    e.printStackTrace()
                 }
-                delay(3000) // Update every 3 seconds
+                delay(3000)
             }
         }
     }
 
-    val progressBarColor = if (garbageLevel > 80) {
-        Color.Red
-    } else {
-        MaterialTheme.colorScheme.secondary
+    val progressBarColor = when {
+        garbageLevel > 70 -> Color.Red
+        garbageLevel in 0..45 -> Color.Green
+        else -> Color(0xFFFFA500)
     }
 
     Column(
