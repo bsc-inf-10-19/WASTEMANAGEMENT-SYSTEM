@@ -23,9 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,7 +51,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
@@ -69,10 +66,6 @@ import com.example.myapplicationwmsystem.Screens.LoginScreen
 import com.example.myapplicationwmsystem.Screens.SignUpScreen
 import com.example.myapplicationwmsystem.Screens.SplashScreen
 import com.example.myapplicationwmsystem.ui.theme.MyApplicationWMsystemTheme
-import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.LineData
-import com.github.mikephil.charting.data.LineDataSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -233,12 +226,14 @@ fun DropdownMenuItem(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable RowScope.() -> Unit
 ) {
+    val rippleColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+
     val modifier = Modifier
         .fillMaxWidth()
         .clickable(
             onClick = onClick,
             interactionSource = interactionSource,
-            indication = rememberRipple(bounded = true)
+            indication = androidx.compose.material3.ripple()
         )
         .padding(16.dp)
 
