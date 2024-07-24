@@ -82,7 +82,7 @@ fun SignUpScreen(onSignUpSuccess: () -> Unit) {
                     onSignUpSuccess()
                 }
             }) {
-                Text("Sign Up")
+                Text("Register")
             }
             if (errorMessage.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(8.dp))
