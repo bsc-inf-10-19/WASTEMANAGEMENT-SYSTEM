@@ -1,6 +1,7 @@
 package com.example.myapplicationwmsystem
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -76,7 +77,20 @@ import java.util.Date
 import java.util.Locale
 import android.os.Handler
 import android.os.Looper
+import android.view.MotionEvent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.myapplicationwmsystem.Screens.SearchScreen
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 
 class MainActivity : ComponentActivity() {
 
@@ -124,9 +138,9 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val navController = rememberNavController()
     val bins = remember { mutableStateListOf(
-        Bin("1", "Bin 1\nChikanda", R.drawable.bin_profile),
-        Bin("2", "Bin 2\nMatawale", R.drawable.bin_profile),
-        Bin("3", "Bin 3\nMpondabwino", R.drawable.bin_profile)
+        Bin("1", "Bin 1\nChikanda", R.drawable.bin_profile, -15.39628, 35.33640),
+        Bin("2", "Bin 2\nMatawale", R.drawable.bin_profile, -15.38628, 35.32640),
+        Bin("3", "Bin 3\nMpondabwino", R.drawable.bin_profile, -15.37628, 35.31640)
     )}
 
     NavHost(navController, startDestination = "splash_screen") {
@@ -162,6 +176,7 @@ fun AppNavigation() {
                 bins.add(newBin)
                 navController.navigate("home_screen")
             })
+
         }
     }
 }
@@ -283,11 +298,14 @@ fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> U
         }
     }
 }
-
+@SuppressLint("ClickableViewAccessibility")
 @Composable
 fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
     var binName by remember { mutableStateOf("") }
     var binLocation by remember { mutableStateOf("") }
+    var binLatitude by remember { mutableStateOf(-15.39628) }
+    var binLongitude by remember { mutableStateOf(35.33640) }
+    var selectedTab by remember { mutableStateOf(0) }
     val context = LocalContext.current
 
     Dialog(onDismissRequest = { onDismiss() }) {
@@ -295,7 +313,7 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .heightIn(max = 600.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -303,23 +321,77 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
             ) {
                 Text(
                     text = "Add New Bin",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
-                OutlinedTextField(
-                    value = binName,
-                    onValueChange = { binName = it },
-                    label = { Text("Bin ID") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = binLocation,
-                    onValueChange = { binLocation = it },
-                    label = { Text("Bin Location") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+
+                TabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Details") }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Location") }
+                    )
+                }
+
+                when (selectedTab) {
+                    0 -> {
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            OutlinedTextField(
+                                value = binName,
+                                onValueChange = { binName = it },
+                                label = { Text("Bin ID") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedTextField(
+                                value = binLocation,
+                                onValueChange = { binLocation = it },
+                                label = { Text("Bin Name") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    1 -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp)
+                                .padding(top = 16.dp)
+                        ) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+                                    MapView(ctx).apply {
+                                        setTileSource(TileSourceFactory.MAPNIK)
+                                        controller.setZoom(15.0)
+                                        controller.setCenter(GeoPoint(binLatitude, binLongitude))
+                                        setOnTouchListener { v, event ->
+                                            if (event.action == MotionEvent.ACTION_UP) {
+                                                val tappedPoint = projection.fromPixels(event.x.toInt(), event.y.toInt())
+                                                binLatitude = tappedPoint.latitude
+                                                binLongitude = tappedPoint.longitude
+                                                overlays.clear()
+                                                overlays.add(Marker(this).apply {
+                                                    position = tappedPoint as GeoPoint?
+                                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                                })
+                                                invalidate()
+                                            }
+                                            false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     horizontalArrangement = Arrangement.End,
@@ -333,9 +405,12 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
                             val newBin = Bin(
                                 id = binName.hashCode().toString(),
                                 name = "$binName\n$binLocation",
-                                imageRes = R.drawable.bin_profile
+                                imageRes = R.drawable.bin_profile,
+                                latitude = binLatitude,
+                                longitude = binLongitude
                             )
                             onAddBinSuccess(newBin)
+                            onDismiss()
                         } else {
                             Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
                         }
@@ -347,7 +422,6 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
         }
     }
 }
-
 data class ChartEntry(val index: Float, val value: Float, val timestamp: Long)
 
 
