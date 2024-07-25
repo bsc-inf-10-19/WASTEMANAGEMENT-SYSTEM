@@ -64,7 +64,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
            if (selectedItem == 0) {
-               MyTopAppBar(context = context, garbageLevel = garbageLevel.value)
+               MyTopAppBar(context = context, garbageLevel = garbageLevel.value, navController)
            }
         },
         bottomBar = {

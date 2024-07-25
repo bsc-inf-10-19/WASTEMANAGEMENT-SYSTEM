@@ -36,7 +36,9 @@ fun SearchScreen( bins: List<Bin>,
                     popUpTo("home_screen") { inclusive = false }
                 }
             },
-            onNotificationClick = { }
+            onNotificationClick = {
+                navController.navigate("notifications_screen")
+            }
         )
         OutlinedTextField(
             value = searchQuery,

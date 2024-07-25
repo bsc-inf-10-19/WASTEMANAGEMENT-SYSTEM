@@ -17,7 +17,9 @@ import androidx.compose.ui.graphics.Color
 fun MyTopAppBar(
     title: String,
     onNavigationClick: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    showNotificationIcon: Boolean = true
+
 ) {
     TopAppBar(
         title = {
@@ -36,12 +38,14 @@ fun MyTopAppBar(
             }
         },
         actions = {
-            IconButton(onClick = onNotificationClick) {
-                Icon(
-                    Icons.Filled.Notifications,
-                    contentDescription = "Notifications",
-                    tint = Color.White
-                )
+            if (showNotificationIcon) {
+                IconButton(onClick = onNotificationClick) {
+                    Icon(
+                        Icons.Filled.Notifications,
+                        contentDescription = "Notifications",
+                        tint = Color.White
+                    )
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

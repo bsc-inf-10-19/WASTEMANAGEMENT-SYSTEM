@@ -24,7 +24,9 @@ fun BinDetailScreen(binId: String, navController: NavController) {
         MyTopAppBar(
             title = "Bin Detail",
             onNavigationClick = { navController.popBackStack() },
-            onNotificationClick = {}
+            onNotificationClick = {
+                navController.navigate("notifications_screen")
+            }
         )
         TabRow(selectedTabIndex = selectedTabIndex) {
             tabs.forEachIndexed { index, title ->

@@ -80,17 +80,26 @@ import android.os.Looper
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.navigation.NavController
 import com.example.myapplicationwmsystem.Screens.SearchScreen
+import kotlinx.coroutines.delay
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import com.example.myapplicationwmsystem.Components.MyTopAppBar
+import com.example.myapplicationwmsystem.Screens.NotificationsScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -143,6 +152,11 @@ fun AppNavigation() {
         Bin("3", "Bin 3\nMpondabwino", R.drawable.bin_profile, -15.37628, 35.31640)
     )}
 
+    val notifications = remember { mutableStateListOf<CustomNotification>() }
+
+    NotificationsHandler(notifications = notifications, binId = bins.firstOrNull()?.id ?: "")
+
+
     NavHost(navController, startDestination = "splash_screen") {
         composable("splash_screen") {
             SplashScreen(onTimeout = { navController.navigate("login_screen") })
@@ -155,6 +169,9 @@ fun AppNavigation() {
         }
         composable("home_screen") {
             HomeScreen(navController, bins)
+        }
+        composable("notifications_screen") {
+            NotificationsScreen(notifications = notifications, navController)
         }
         composable("search_screen") {
             SearchScreen(
@@ -183,7 +200,7 @@ fun AppNavigation() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyTopAppBar(context: Context, garbageLevel: Int) {
+fun MyTopAppBar(context: Context, garbageLevel: Int, navController: NavController) {
     TopAppBar(
         title = {
             Text(
@@ -193,7 +210,7 @@ fun MyTopAppBar(context: Context, garbageLevel: Int) {
         },
         actions = {
             IconButton(onClick = {
-                handleNotificationClick(context, garbageLevel)
+                navController.navigate("notifications_screen")
             }) {
                 Icon(
                     Icons.Filled.Notifications,
@@ -433,30 +450,89 @@ class TimeAxisFormatter : com.github.mikephil.charting.formatter.ValueFormatter(
     }
 }
 
-
 fun showNotification(context: Context, level: Int) {
     val channelId = "GARBAGE_ALERT_CHANNEL"
     val notificationManager = NotificationManagerCompat.from(context)
 
-    when {
+    val builder = when {
         level > 70 -> {
-            val builder = NotificationCompat.Builder(context, channelId)
+            NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle("Garbage Level Alert")
                 .setContentText("Garbage level is critically high at $level%. Please take action.")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setAutoCancel(true)
-
-            val notificationId = 1
-            notificationManager.notify(notificationId, builder.build())
-
-            Handler(Looper.getMainLooper()).postDelayed({
-                notificationManager.cancel(notificationId)
-            }, 5000)
         }
+        level in 30..70 -> {
+            NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("Garbage Level Advisory")
+                .setContentText("Garbage level is at $level%. Consider taking action soon.")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+        }
+        else -> null
+    }
+
+    builder?.let {
+        notificationManager.notify(level, it.build())
     }
 }
 
+data class CustomNotification(
+    val id: Int,
+    val title: String,
+    val description: String,
+    val color: Color
+)
+
+@Composable
+fun NotificationsHandler(
+    notifications: MutableList<CustomNotification>,
+    binId: String
+) {
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            val level = fetchGarbageLevelFromThingSpeak(binId)
+            if (level >= 30) {
+                val notification = when {
+                    level > 70 -> {
+                        CustomNotification(
+                            id = 4,
+                            title = "Garbage Level Alert",
+                            description = "Garbage level is critically high at $level%. Please take action.",
+                            color = Color(0xFFf8d7da)
+                        )
+                    }
+                    level in 30..70 -> {
+                        CustomNotification(
+                            id = 5,
+                            title = "Garbage Level Advisory",
+                            description = "Garbage level is at $level%. Consider taking action soon.",
+                            color = Color(0xFFfff3cd)
+                        )
+                    }
+                    else -> {
+                        CustomNotification(
+                            id = 6,
+                            title = "Garbage Level Normal",
+                            description = "Garbage level is normal at $level%.",
+                            color = Color(0xFFd4edda)
+                        )
+                    }
+                }
+
+                if (notifications.none { it.description == notification.description }) {
+                    notifications.add(notification)
+                    showNotification(context, level)
+                }
+            }
+            delay(3000) // Update every 3 seconds
+        }
+    }
+}
 
 suspend fun fetchGarbageLevelFromThingSpeak(binId: String): Int {
     val apiKey = "H8M68IKI5A3QYVET"

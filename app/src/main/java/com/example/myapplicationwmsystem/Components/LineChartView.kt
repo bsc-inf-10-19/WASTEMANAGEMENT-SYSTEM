@@ -31,7 +31,7 @@ fun LineChartView(entries: List<ChartEntry>) {
             .fillMaxWidth()
             .height(300.dp),
         elevation = 8.dp,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(10.dp),
         backgroundColor = Color.White
     ) {
         AndroidView(
@@ -45,10 +45,20 @@ fun LineChartView(entries: List<ChartEntry>) {
                     setPinchZoom(true)
                     description.isEnabled = false
 
-                    legend.isEnabled = true
-                    legend.form = Legend.LegendForm.LINE
-                    legend.textColor = Color.Black.toArgb()
-                    legend.textSize = 12f
+                    legend.apply {
+                        isEnabled = true
+                        form = Legend.LegendForm.LINE
+                        textColor = Color.Black.toArgb()
+                        textSize = 12f
+                        verticalAlignment = Legend.LegendVerticalAlignment.TOP
+                        horizontalAlignment = Legend.LegendHorizontalAlignment.CENTER
+                        orientation = Legend.LegendOrientation.HORIZONTAL
+                        setDrawInside(false)
+                        yOffset = 10f
+                        xOffset = 0f
+                        yEntrySpace = 10f
+                        xEntrySpace = 10f
+                    }
 
                     xAxis.apply {
                         position = XAxis.XAxisPosition.BOTTOM
@@ -57,6 +67,9 @@ fun LineChartView(entries: List<ChartEntry>) {
                         setDrawLabels(true)
                         granularity = 1f
                         labelRotationAngle = -45f
+                        textColor = Color.Black.toArgb()
+                        gridColor = Color.LightGray.toArgb()
+                        gridLineWidth = 0.5f
                         textColor = Color.Black.toArgb()
                         valueFormatter = object : ValueFormatter() {
                             override fun getFormattedValue(value: Float): String {
@@ -76,6 +89,8 @@ fun LineChartView(entries: List<ChartEntry>) {
                         setDrawLabels(true)
                         axisMinimum = 0f
                         textColor = Color.Black.toArgb()
+                        gridColor = Color.LightGray.toArgb()
+                        gridLineWidth = 0.5f
                         valueFormatter = object : ValueFormatter() {
                             override fun getFormattedValue(value: Float): String {
                                 return "${value.toInt()}"
@@ -95,10 +110,10 @@ fun LineChartView(entries: List<ChartEntry>) {
                         setDrawCircles(true)
                         lineWidth = 2f
                         setDrawFilled(true)
-                        fillColor = Color.Red.toArgb()
-                        color = Color.Red.toArgb()
-                        setCircleColor(Color.Red.toArgb())
-                        circleHoleColor = Color.Red.toArgb()
+                        fillColor = Color(0xFFBBDEFB).toArgb()
+                        color = Color(0xFF1A73E8).toArgb()
+                        setCircleColor(Color(0xFF1A73E8).toArgb())
+                        circleHoleColor = Color(0xFF1A73E8).toArgb()
                     }
                     chart.data = LineData(lineDataSet)
                     chart.invalidate()
