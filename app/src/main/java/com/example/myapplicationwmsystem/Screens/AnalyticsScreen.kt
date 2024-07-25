@@ -1,7 +1,9 @@
 package com.example.myapplicationwmsystem.Screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +15,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
+import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.text.font.FontWeight
 import com.example.myapplicationwmsystem.ChartEntry
@@ -63,22 +67,33 @@ fun AnalyticsScreen(binId: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.Start
     ) {
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "Garbage Level",
+            text = "Garbage Chart",
             color = Color.Black,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(16.dp))
 
         TabRow(
             selectedTabIndex = selectedTabIndex,
             backgroundColor = Color.Transparent,
-            contentColor = Color.Black
+            contentColor = Color(0xFF1A73E8),
+            indicator = { tabPositions ->
+                TabRowDefaults.Indicator(
+                    Modifier
+                        .tabIndicatorOffset(tabPositions[selectedTabIndex])
+                        .width(4.dp)
+                        .height(4.dp)
+                        .background(Color(0xFF1A73E8))
+                )
+            },
+            divider = {}
         ) {
-            val tabTitles = listOf("1 Day", "1 Week", "1 Month", "1 Year", "All Time")
+            val tabTitles = listOf("1 Day", "1 Week", "1 Month", "1 Year")
             tabTitles.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
@@ -87,24 +102,24 @@ fun AnalyticsScreen(binId: String) {
                         filterDataEntries()
                     },
                     modifier = Modifier
-                        .padding(bottom = 4.dp)
-                        .border(
-                            width = 0.dp,
-                            color = Color.Transparent
+                        .padding(4.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            if (selectedTabIndex == index) Color.Transparent else Color.Transparent
                         )
+                        .border(
+                            width = 2.dp,
+                            color = if (selectedTabIndex == index) Color.Transparent else Color.Transparent,
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
-                            .border(
-                                width = if (selectedTabIndex == index) 2.dp else 0.dp,
-                                color = if (selectedTabIndex == index) Color.Black else Color.Transparent,
-
-                            )
-                    ) {
-                        Text(text = title, modifier = Modifier.padding(vertical = 8.dp))
-                    }
+                    Text(
+                        text = title,
+                        fontWeight = FontWeight.Bold,
+                        color = if (selectedTabIndex == index) Color(0xFF1A73E8) else Color.LightGray,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
             }
         }
@@ -115,9 +130,6 @@ fun AnalyticsScreen(binId: String) {
     }
 }
 
-//private fun <T> SnapshotStateList<T>.filter(predicate: (ChartEntry) -> Unit): List<T> {
-//    return this.filter(predicate)
-//}
 
 val Int.dayInMillis: Long
     get() = this * 24L * 60 * 60 * 1000
