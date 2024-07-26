@@ -11,24 +11,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import androidx.compose.material.Tab
 import androidx.compose.material.TabRow
 import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import com.example.myapplicationwmsystem.ChartEntry
 import com.example.myapplicationwmsystem.Components.LineChartView
+import com.example.myapplicationwmsystem.db.DatabaseHelper
+import com.example.myapplicationwmsystem.db.GarbageLevelEntry
 import com.example.myapplicationwmsystem.fetchGarbageLevelFromThingSpeak
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun AnalyticsScreen(binId: String) {
-    val dataEntries = remember { mutableStateListOf<ChartEntry>() }
-    var entryIndex by remember { mutableStateOf(1f) }
-    var selectedTabIndex by remember { mutableStateOf(0) }
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val databaseHelper = remember { DatabaseHelper(context) }
+
+    var dataEntries by remember { mutableStateOf(listOf<ChartEntry>()) }
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
@@ -36,22 +40,29 @@ fun AnalyticsScreen(binId: String) {
                 try {
                     val garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
                     val timestamp = System.currentTimeMillis()
-                    dataEntries.add(ChartEntry(entryIndex, garbageLevel.toFloat(), timestamp))
-                    entryIndex += 1
-                    if (dataEntries.size > 30) {
-                        dataEntries.removeAt(0)
+
+                    saveGarbageLevelToDatabase(databaseHelper, binId, garbageLevel, timestamp)
+
+                    // Fetch and filter data based on the selected tab index
+                    val filteredEntries = fetchGarbageLevelsFromDatabase(databaseHelper, selectedTabIndex)
+                    dataEntries = filteredEntries.mapIndexed { index, entry ->
+                        ChartEntry(
+                            index = index.toFloat(),
+                            value = entry.garbageLevel.toFloat(),
+                            timestamp = entry.timestamp
+                        )
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                delay(10000)
+                delay(10000) // Fetch every 10 seconds
             }
         }
     }
 
     fun filterDataEntries() {
         val currentTime = System.currentTimeMillis()
-        val filteredEntries = when (selectedTabIndex) {
+        dataEntries = when (selectedTabIndex) {
             0 -> dataEntries.filter { it.timestamp >= currentTime - 1.dayInMillis }
             1 -> dataEntries.filter { it.timestamp >= currentTime - 1.weekInMillis }
             2 -> dataEntries.filter { it.timestamp >= currentTime - 1.monthInMillis }
@@ -59,8 +70,6 @@ fun AnalyticsScreen(binId: String) {
             4 -> dataEntries // All time
             else -> emptyList()
         }
-        dataEntries.clear()
-        dataEntries.addAll(filteredEntries)
     }
 
     Column(
@@ -93,13 +102,13 @@ fun AnalyticsScreen(binId: String) {
             },
             divider = {}
         ) {
-            val tabTitles = listOf("1 Day", "1 Week", "1 Month", "1 Year")
+            val tabTitles = listOf("Day", "Week", "Month", "Year", "All Time")
             tabTitles.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = {
                         selectedTabIndex = index
-                        filterDataEntries()
+                        filterDataEntries() // Filter data when tab is selected
                     },
                     modifier = Modifier
                         .padding(4.dp)
@@ -126,7 +135,7 @@ fun AnalyticsScreen(binId: String) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        LineChartView(entries = dataEntries)
+        LineChartView(entries = dataEntries) // Ensure this composable can handle the dataEntries
     }
 }
 
@@ -142,3 +151,21 @@ val Int.monthInMillis: Long
 
 val Int.yearInMillis: Long
     get() = this * 365L * 24 * 60 * 60 * 1000
+
+private fun saveGarbageLevelToDatabase(databaseHelper: DatabaseHelper, binId: String, garbageLevel: Int, timestamp: Long) {
+    val entry = GarbageLevelEntry(binId, garbageLevel, timestamp)
+    databaseHelper.insertGarbageLevel(entry)
+}
+
+private fun fetchGarbageLevelsFromDatabase(databaseHelper: DatabaseHelper, selectedTabIndex: Int): List<GarbageLevelEntry> {
+    val currentTime = System.currentTimeMillis()
+    val allEntries = databaseHelper.getAllGarbageLevels()
+    return when (selectedTabIndex) {
+        0 -> allEntries.filter { it.timestamp >= currentTime - 1.dayInMillis }
+        1 -> allEntries.filter { it.timestamp >= currentTime - 1.weekInMillis }
+        2 -> allEntries.filter { it.timestamp >= currentTime - 1.monthInMillis }
+        3 -> allEntries.filter { it.timestamp >= currentTime - 1.yearInMillis }
+        4 -> allEntries
+        else -> emptyList()
+    }
+}
