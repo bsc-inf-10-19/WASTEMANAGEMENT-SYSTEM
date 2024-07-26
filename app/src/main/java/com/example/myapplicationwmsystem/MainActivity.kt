@@ -60,7 +60,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myapplicationwmsystem.Screens.AddBinScreen
-import com.example.myapplicationwmsystem.Screens.Bin
 import com.example.myapplicationwmsystem.Screens.BinDetailScreen
 import com.example.myapplicationwmsystem.Screens.HomeScreen
 import com.example.myapplicationwmsystem.Screens.LoginScreen
@@ -75,17 +74,9 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import android.os.Handler
-import android.os.Looper
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
@@ -98,22 +89,33 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import com.example.myapplicationwmsystem.Components.MyTopAppBar
 import com.example.myapplicationwmsystem.Screens.NotificationsScreen
+import com.example.myapplicationwmsystem.db.Bin
+import com.example.myapplicationwmsystem.db.DatabaseHelper
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var databaseHelper: DatabaseHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         createNotificationChannel()
         requestNotificationPermission()
+
+        databaseHelper = DatabaseHelper(this)
+
         setContent {
             MyApplicationWMsystemTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                    AppNavigation()
+                    AppNavigation(databaseHelper = databaseHelper)
                 }
             }
         }
+    }
+
+    override fun onDestroy() {
+        databaseHelper.close()
+        super.onDestroy()
     }
 
     private fun createNotificationChannel() {
@@ -144,18 +146,12 @@ class MainActivity : ComponentActivity() {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavigation() {
+fun AppNavigation(databaseHelper: DatabaseHelper) {
     val navController = rememberNavController()
-    val bins = remember { mutableStateListOf(
-        Bin("1", "Bin 1\nChikanda", R.drawable.bin_profile, -15.39628, 35.33640),
-        Bin("2", "Bin 2\nMatawale", R.drawable.bin_profile, -15.38628, 35.32640),
-        Bin("3", "Bin 3\nMpondabwino", R.drawable.bin_profile, -15.37628, 35.31640)
-    )}
-
+    val bins = remember { mutableStateListOf<Bin>() }
     val notifications = remember { mutableStateListOf<CustomNotification>() }
 
     NotificationsHandler(notifications = notifications, binId = bins.firstOrNull()?.id ?: "")
-
 
     NavHost(navController, startDestination = "splash_screen") {
         composable("splash_screen") {
@@ -168,7 +164,7 @@ fun AppNavigation() {
             SignUpScreen(onSignUpSuccess = { navController.navigate("login_screen") })
         }
         composable("home_screen") {
-            HomeScreen(navController, bins)
+            HomeScreen(navController, bins, databaseHelper)
         }
         composable("notifications_screen") {
             NotificationsScreen(notifications = notifications, navController)
@@ -189,18 +185,16 @@ fun AppNavigation() {
             )
         }
         composable("add_bin_screen") {
-            AddBinScreen(onAddBinSuccess = { newBin ->
+            AddBinScreen(databaseHelper = databaseHelper) { newBin ->
                 bins.add(newBin)
                 navController.navigate("home_screen")
-            })
-
+            }
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MyTopAppBar(context: Context, garbageLevel: Int, navController: NavController) {
+fun MyTopAppBar(navController: NavController) {
     TopAppBar(
         title = {
             Text(
@@ -225,13 +219,11 @@ fun MyTopAppBar(context: Context, garbageLevel: Int, navController: NavControlle
     )
 }
 
-private fun handleNotificationClick(context: Context, garbageLevel: Int) {
-    showNotification(context, garbageLevel)
-}
 @Composable
-fun DeleteDropdownMenu(
+fun EditDeleteDropdownMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     DropdownMenu(
@@ -239,12 +231,22 @@ fun DeleteDropdownMenu(
         onDismissRequest = onDismissRequest,
         offset = DpOffset(x = (-16).dp, y = 0.dp)
     ) {
+        EditDropdownMenuItem(onEdit)
         DeleteDropdownMenuItem(onDelete)
     }
 }
 
 @Composable
-fun ColumnScope.DeleteDropdownMenuItem(onDelete: () -> Unit) {
+fun EditDropdownMenuItem(onEdit: () -> Unit) {
+    DropdownMenuItem(onClick = {
+        onEdit()
+    }) {
+        Text("Edit")
+    }
+}
+
+@Composable
+fun DeleteDropdownMenuItem(onDelete: () -> Unit) {
     DropdownMenuItem(onClick = {
         onDelete()
     }) {
@@ -418,18 +420,13 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
                         Text("Cancel")
                     }
                     Button(onClick = {
-                        if (binName.isNotEmpty() && binLocation.isNotEmpty()) {
-                            val newBin = Bin(
-                                id = binName.hashCode().toString(),
-                                name = "$binName\n$binLocation",
-                                imageRes = R.drawable.bin_profile,
-                                latitude = binLatitude,
-                                longitude = binLongitude
-                            )
+                        if (binName.isNotBlank() && binLocation.isNotBlank()) {
+                            val newBin = Bin(binName, binLocation, R.drawable.bin_profile, binLatitude, binLongitude)
                             onAddBinSuccess(newBin)
                             onDismiss()
+                            Toast.makeText(context, "Bin added successfully", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(context, "All fields are required", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Please fill all details", Toast.LENGTH_SHORT).show()
                         }
                     }) {
                         Text("Add Bin")
@@ -439,6 +436,127 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
         }
     }
 }
+@SuppressLint("ClickableViewAccessibility")
+@Composable
+fun EditBinDialog(
+    bin: Bin,
+    onDismiss: () -> Unit,
+    onEditBinSuccess: (Bin) -> Unit
+) {
+    var binName by remember { mutableStateOf(bin.name) }
+    var binLatitude by remember { mutableStateOf(bin.latitude) }
+    var binLongitude by remember { mutableStateOf(bin.longitude) }
+    var selectedTab by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+
+    Dialog(onDismissRequest = { onDismiss() }) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 600.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Edit Bin",
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                TabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Details") }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Location") }
+                    )
+                }
+
+                when (selectedTab) {
+                    0 -> {
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            OutlinedTextField(
+                                value = binName,
+                                onValueChange = { binName = it },
+                                label = { Text("Bin Name") },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+                    1 -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp)
+                                .padding(top = 16.dp)
+                        ) {
+                            AndroidView(
+                                factory = { ctx ->
+                                    Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+                                    MapView(ctx).apply {
+                                        setTileSource(TileSourceFactory.MAPNIK)
+                                        controller.setZoom(15.0)
+                                        controller.setCenter(GeoPoint(binLatitude, binLongitude))
+                                        setOnTouchListener { v, event ->
+                                            if (event.action == MotionEvent.ACTION_UP) {
+                                                val tappedPoint = projection.fromPixels(event.x.toInt(), event.y.toInt())
+                                                binLatitude = tappedPoint.latitude
+                                                binLongitude = tappedPoint.longitude
+                                                overlays.clear()
+                                                overlays.add(Marker(this).apply {
+                                                    position = tappedPoint as GeoPoint?
+                                                    setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                                                })
+                                                invalidate()
+                                            }
+                                            false
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextButton(onClick = { onDismiss() }) {
+                        Text("Cancel")
+                    }
+                    Button(onClick = {
+                        if (binName.isNotBlank()) {
+                            val updatedBin = bin.copy(
+                                name = binName,
+                                latitude = binLatitude,
+                                longitude = binLongitude
+                            )
+                            onEditBinSuccess(updatedBin)
+                            onDismiss()
+                            Toast.makeText(context, "Bin updated successfully", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Please fill all details", Toast.LENGTH_SHORT).show()
+                        }
+                    }) {
+                        Text("Save Changes")
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 data class ChartEntry(val index: Float, val value: Float, val timestamp: Long)
 
 
@@ -560,7 +678,9 @@ suspend fun fetchGarbageLevelFromThingSpeak(binId: String): Int {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
+    val context = LocalContext.current
+    val databaseHelper = DatabaseHelper(context)
     MyApplicationWMsystemTheme {
-        AppNavigation()
+        AppNavigation(databaseHelper = databaseHelper)
     }
 }

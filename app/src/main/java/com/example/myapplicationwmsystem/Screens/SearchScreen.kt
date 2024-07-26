@@ -18,13 +18,16 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.myapplicationwmsystem.Components.HomeScreenItem
 import com.example.myapplicationwmsystem.Components.MyTopAppBar
-
+import com.example.myapplicationwmsystem.db.Bin
 
 @Composable
-fun SearchScreen( bins: List<Bin>,
-                  onBinClick: (Bin) -> Unit,
-                  navController: NavController
+fun SearchScreen(
+    bins: List<Bin>,
+    onBinClick: (Bin) -> Unit,
+    navController: NavController
 ) {
+    var showEditDialog by remember { mutableStateOf<Bin?>(null) }
+    var binToDelete by remember { mutableStateOf<Bin?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     val filteredBins = bins.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
@@ -54,7 +57,8 @@ fun SearchScreen( bins: List<Bin>,
                     imageRes = bin.imageRes,
                     text = bin.name,
                     onClick = { onBinClick(bin) },
-                    onDelete = { /* No delete option in search */ }
+                    onEdit = { showEditDialog = bin },
+                    onDelete = { binToDelete = bin }
                 )
             }
         }

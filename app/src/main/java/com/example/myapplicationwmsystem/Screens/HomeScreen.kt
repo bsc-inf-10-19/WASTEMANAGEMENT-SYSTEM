@@ -32,28 +32,38 @@ import androidx.navigation.NavHostController
 import com.example.myapplicationwmsystem.AddBinDialog
 import com.example.myapplicationwmsystem.Components.HomeScreenItem
 import com.example.myapplicationwmsystem.DeleteBinDialog
+import com.example.myapplicationwmsystem.EditBinDialog
 import com.example.myapplicationwmsystem.MyTopAppBar
+import com.example.myapplicationwmsystem.db.Bin
+import com.example.myapplicationwmsystem.db.DatabaseHelper
 import com.example.myapplicationwmsystem.fetchGarbageLevelFromThingSpeak
 import kotlinx.coroutines.delay
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavHostController,
-    bins: SnapshotStateList<Bin>
+    bins: SnapshotStateList<Bin>,
+    databaseHelper: DatabaseHelper
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    var showEditDialog by remember { mutableStateOf<Bin?>(null) }
     var binToDelete by remember { mutableStateOf<Bin?>(null) }
-    var binToEdit by remember { mutableStateOf<Bin?>(null) }
     var selectedItem by remember { mutableStateOf(0) }
-    val context = LocalContext.current
-    val garbageLevel = remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
-        val binId = "your-bin-id" // Replace with the actual bin ID
+        val fetchedBins = databaseHelper.getAllBins()
+        bins.addAll(fetchedBins)
+    }
+
+    LaunchedEffect(Unit) {
         while (true) {
             try {
-                garbageLevel.value = fetchGarbageLevelFromThingSpeak(binId)
+                bins.forEach { bin ->
+                    val updatedLevel = fetchGarbageLevelFromThingSpeak(bin.id)
+                    bin.garbageLevel = updatedLevel
+                    databaseHelper.updateBin(bin) // Update bin info in database
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -63,9 +73,9 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-           if (selectedItem == 0) {
-               MyTopAppBar(context = context, garbageLevel = garbageLevel.value, navController)
-           }
+            if (selectedItem == 0) {
+                MyTopAppBar(navController)
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -100,9 +110,11 @@ fun HomeScreen(
         },
         floatingActionButtonPosition = FabPosition.End
     ) { innerPadding ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(innerPadding)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             when (selectedItem) {
                 0 -> {
                     Column(
@@ -116,6 +128,7 @@ fun HomeScreen(
                                 imageRes = bin.imageRes,
                                 text = bin.name,
                                 onClick = { navController.navigate("bin_detail_screen/${bin.id}") },
+                                onEdit = { showEditDialog = bin },
                                 onDelete = { binToDelete = bin }
                             )
                         }
@@ -136,10 +149,24 @@ fun HomeScreen(
                     onDismiss = { showDialog = false },
                     onAddBinSuccess = { newBin ->
                         bins.add(newBin)
+                        databaseHelper.insertBin(newBin)
                         showDialog = false
                     }
                 )
             }
+
+            showEditDialog?.let { bin ->
+                EditBinDialog(
+                    bin = bin,
+                    onDismiss = { showEditDialog = null },
+                    onEditBinSuccess = { updatedBin ->
+                        bins[bins.indexOf(bin)] = updatedBin
+                        databaseHelper.updateBin(updatedBin)
+                        showEditDialog = null
+                    }
+                )
+            }
+
 
             binToDelete?.let { bin ->
                 DeleteBinDialog(
@@ -147,6 +174,7 @@ fun HomeScreen(
                     onDismiss = { binToDelete = null },
                     onDeleteBinSuccess = {
                         bins.remove(bin)
+                        databaseHelper.deleteBin(bin.id)
                         binToDelete = null
                     }
                 )

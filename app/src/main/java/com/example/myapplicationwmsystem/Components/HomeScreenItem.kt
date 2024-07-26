@@ -25,7 +25,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplicationwmsystem.DeleteDropdownMenu
+import com.example.myapplicationwmsystem.EditDeleteDropdownMenu
 
 
 @Composable
@@ -33,6 +33,7 @@ fun HomeScreenItem(
     imageRes: Int,
     text: String,
     onClick: () -> Unit,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -56,9 +57,13 @@ fun HomeScreenItem(
             IconButton(onClick = { expanded = true }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "More options")
             }
-            DeleteDropdownMenu(
+            EditDeleteDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
+                onEdit = {
+                    onEdit()
+                    expanded = false
+                },
                 onDelete = {
                     onDelete()
                     expanded = false
