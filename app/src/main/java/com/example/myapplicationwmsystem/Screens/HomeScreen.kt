@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
@@ -36,7 +38,6 @@ import com.example.myapplicationwmsystem.MyTopAppBar
 import com.example.myapplicationwmsystem.fetchGarbageLevelFromThingSpeak
 import kotlinx.coroutines.delay
 
-
 @Composable
 fun HomeScreen(
     navController: NavHostController,
@@ -63,9 +64,9 @@ fun HomeScreen(
 
     Scaffold(
         topBar = {
-           if (selectedItem == 0) {
-               MyTopAppBar(context = context, garbageLevel = garbageLevel.value, navController)
-           }
+            if (selectedItem == 0) {
+                MyTopAppBar(context = context, garbageLevel = garbageLevel.value, navController)
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -105,13 +106,13 @@ fun HomeScreen(
             .padding(innerPadding)) {
             when (selectedItem) {
                 0 -> {
-                    Column(
+                    LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        bins.forEach { bin ->
+                        items(bins) { bin ->
                             HomeScreenItem(
                                 imageRes = bin.imageRes,
                                 text = bin.name,

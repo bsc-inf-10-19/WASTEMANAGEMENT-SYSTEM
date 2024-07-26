@@ -60,7 +60,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.myapplicationwmsystem.Screens.AddBinScreen
-import com.example.myapplicationwmsystem.Screens.Bin
 import com.example.myapplicationwmsystem.Screens.BinDetailScreen
 import com.example.myapplicationwmsystem.Screens.HomeScreen
 import com.example.myapplicationwmsystem.Screens.LoginScreen
@@ -75,17 +74,9 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import android.os.Handler
-import android.os.Looper
 import android.view.MotionEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
@@ -98,7 +89,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
-import com.example.myapplicationwmsystem.Components.MyTopAppBar
+import com.example.myapplicationwmsystem.Screens.Bin
 import com.example.myapplicationwmsystem.Screens.NotificationsScreen
 
 class MainActivity : ComponentActivity() {
@@ -147,9 +138,9 @@ class MainActivity : ComponentActivity() {
 fun AppNavigation() {
     val navController = rememberNavController()
     val bins = remember { mutableStateListOf(
-        Bin("1", "Bin 1\nChikanda", R.drawable.bin_profile, -15.39628, 35.33640),
-        Bin("2", "Bin 2\nMatawale", R.drawable.bin_profile, -15.38628, 35.32640),
-        Bin("3", "Bin 3\nMpondabwino", R.drawable.bin_profile, -15.37628, 35.31640)
+        Bin("1", "Bin 1\nChikanda", R.drawable.bin_profile, -15.39115195293859, 35.33502472502789),
+        Bin("2", "Bin 2\nMatawale", R.drawable.bin_profile, -15.392452209310825, 35.3548189642389),
+        Bin("3", "Bin 3\nMpondabwino", R.drawable.bin_profile, -15.396535215120096, 35.32878596139752)
     )}
 
     val notifications = remember { mutableStateListOf<CustomNotification>() }

@@ -1,6 +1,7 @@
 package com.example.myapplicationwmsystem.Screens
 
 import android.content.Context
+import android.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,8 @@ import kotlin.math.min
 import kotlin.math.sqrt
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -30,11 +33,13 @@ import kotlinx.coroutines.launch
 import org.osmdroid.bonuspack.routing.OSRMRoadManager
 import org.osmdroid.bonuspack.routing.Road
 import org.osmdroid.bonuspack.routing.RoadManager
+import androidx.lifecycle.viewmodel.compose.viewModel
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import androidx.compose.ui.graphics.toArgb
 import org.osmdroid.views.overlay.Polyline
 import kotlin.math.roundToInt
 @Composable
@@ -48,6 +53,8 @@ fun MapScreen(bins: List<Bin>) {
     val predefinedLocation = GeoPoint(-15.387608019953023, 35.33678641198779)
     val truckMarker = remember { mutableStateOf<Marker?>(null) }
     val isAnimating = remember { mutableStateOf(false) }
+    val currentBin = remember { mutableStateOf<String?>(null) }
+
 
     AndroidView(
         factory = { ctx ->
@@ -57,14 +64,15 @@ fun MapScreen(bins: List<Bin>) {
                 controller.setZoom(18.0)
                 controller.setCenter(GeoPoint(zombaLatitude, zombaLongitude))
 
+
                 bins.forEach { bin ->
                     val marker = Marker(this).apply {
                         position = GeoPoint(bin.latitude, bin.longitude)
                         setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                        title = bin.name
+                        title = bin.name.toString()
                         setOnMarkerClickListener { _, _ ->
                             controller.animateTo(position, 20.0, 1000L)
-                            selectedBinName.value = bin.name
+                            selectedBinName.value = bin.name.toString()
                             true
                         }
                     }
@@ -81,6 +89,7 @@ fun MapScreen(bins: List<Bin>) {
     )
 
     Box(modifier = Modifier.fillMaxSize()) {
+
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -98,6 +107,13 @@ fun MapScreen(bins: List<Bin>) {
                     text = info,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.secondary
+                )
+            }
+            currentBin.value?.let { binName ->
+                Text(
+                    text = "Collecting garbage from $binName",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.tertiary
                 )
             }
         }
@@ -136,7 +152,11 @@ fun MapScreen(bins: List<Bin>) {
                         val road = roadManager.getRoad(waypoints)
                         launch(Dispatchers.Main) {
                             mapViewState.value?.overlays?.removeAll { it is Polyline }
-                            val roadOverlay = RoadManager.buildRoadOverlay(road)
+                            val roadOverlay = RoadManager.buildRoadOverlay(road).apply {
+                                outlinePaint.color = Color.BLUE // Use Android's Color.BLUE
+                                paint.color = Color.BLUE // Use Android's Color.BLUE
+                            }
+
                             mapViewState.value?.overlays?.add(roadOverlay)
 
                             // Remove existing truck marker if any
@@ -162,7 +182,6 @@ fun MapScreen(bins: List<Bin>) {
         }
     }
 
-    // Animate the truck along the route
     LaunchedEffect(isAnimating.value) {
         if (isAnimating.value && truckMarker.value != null) {
             val road = (mapViewState.value?.overlays?.find { it is Polyline } as? Polyline)?.actualPoints ?: return@LaunchedEffect
@@ -171,22 +190,42 @@ fun MapScreen(bins: List<Bin>) {
                 mapViewState.value?.invalidate()
 
                 // Check if this point is a bin location
-                val isBinLocation = bins.any { bin ->
+                val bin = bins.find { bin ->
                     val binPoint = GeoPoint(bin.latitude, bin.longitude)
                     binPoint.distanceToAsDouble(point) < 10 // 10 meters threshold
                 }
 
-                if (isBinLocation) {
+                if (bin != null) {
                     // Simulate garbage collection at bin
+                    currentBin.value = bin.name.toString()
                     delay(2000) // Wait for 2 seconds at each bin
+                    currentBin.value = null
                 } else {
-                    delay(100) // Move every half second between bins
+                    delay(100) // Move every 0.1 second between bins
                 }
             }
             isAnimating.value = false
+            currentBin.value = null
         }
     }
-}
+
+    fun findOptimalRoute(locations: List<GeoPoint>): List<GeoPoint> {
+    // Simple heuristic for TSP - Nearest Neighbor
+    val visited = mutableSetOf<GeoPoint>()
+    val route = mutableListOf<GeoPoint>()
+    var currentLocation = locations.first()
+
+    while (visited.size < locations.size) {
+        visited.add(currentLocation)
+        route.add(currentLocation)
+        val nextLocation = locations.filterNot { it in visited }
+            .minByOrNull { currentLocation.distanceToAsDouble(it) }
+        currentLocation = nextLocation ?: break
+    }
+
+    return route
+}}
+
 fun findOptimalRoute(locations: List<GeoPoint>): List<GeoPoint> {
     // Simple heuristic for TSP - Nearest Neighbor
     val visited = mutableSetOf<GeoPoint>()

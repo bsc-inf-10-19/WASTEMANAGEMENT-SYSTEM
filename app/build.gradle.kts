@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.jetbrainsKotlinAndroid)
+    id("kotlin-kapt")
+
 }
 
 android {
@@ -62,6 +64,8 @@ dependencies {
     implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation ("androidx.activity:activity-compose:1.7.2")
     implementation(libs.material3)
+    implementation("androidx.room:room-runtime:2.3.0")
+    implementation ("com.google.code.gson:gson:2.8.9")
     implementation ("org.osmdroid:osmdroid-android:6.1.11")
     implementation ("org.osmdroid:osmdroid-wms:6.1.11")
     implementation ("org.osmdroid:osmdroid-mapsforge:6.1.11")
@@ -73,14 +77,28 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.10")
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
+    implementation (platform("com.google.firebase:firebase-bom:30.0.0"))
+    implementation ("com.google.firebase:firebase-database-ktx")
     implementation("androidx.navigation:navigation-compose:2.4.0-alpha10")
     implementation("com.github.PhilJay:MPAndroidChart:3.1.0")
+    implementation ("androidx.datastore:datastore-preferences:1.0.0")
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
+    implementation ("androidx.room:room-runtime:2.5.1")
+    implementation ("androidx.room:room-ktx:2.5.1")
+    implementation ("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2")
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
     implementation(libs.androidx.appcompat)
+    implementation ("com.google.android.material:material:1.8.0")
+
+    implementation ("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.1")
+    implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    kapt ("androidx.room:room-compiler:2.5.1")
+    kapt ("androidx.room:room-compiler:2.5.1")
 
 }

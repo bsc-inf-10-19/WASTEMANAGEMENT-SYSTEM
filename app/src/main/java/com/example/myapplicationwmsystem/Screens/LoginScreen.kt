@@ -87,7 +87,7 @@ fun LoginScreen(onLoginSuccess: () -> Unit, onSignUp: () -> Unit) {
                     Text("Sign In")
                 }
                 Button(onClick = { onSignUp() }) {
-                    Text("Sign Up")
+                    Text("Create Account")
                 }
             }
         }
