@@ -64,6 +64,8 @@ dependencies {
     implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation ("androidx.activity:activity-compose:1.7.2")
     implementation(libs.material3)
+    implementation("com.mapbox.mapboxsdk:mapbox-sdk-turf:6.8.0")
+    implementation("com.mapbox.maps:android:11.5.1")
     implementation("androidx.room:room-runtime:2.3.0")
     implementation ("com.google.code.gson:gson:2.8.9")
     implementation ("org.osmdroid:osmdroid-android:6.1.11")
