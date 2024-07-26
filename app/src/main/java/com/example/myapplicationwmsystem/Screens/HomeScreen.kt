@@ -53,17 +53,20 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         val fetchedBins = databaseHelper.getAllBins()
+        bins.clear()
         bins.addAll(fetchedBins)
     }
 
     LaunchedEffect(Unit) {
         while (true) {
             try {
-                bins.forEach { bin ->
+                val updatedBins = bins.toList().map { bin ->
                     val updatedLevel = fetchGarbageLevelFromThingSpeak(bin.id)
-                    bin.garbageLevel = updatedLevel
-                    databaseHelper.updateBin(bin) // Update bin info in database
+                    bin.copy(garbageLevel = updatedLevel)
                 }
+                bins.clear()
+                bins.addAll(updatedBins)
+                updatedBins.forEach { databaseHelper.updateBin(it) }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -148,8 +151,10 @@ fun HomeScreen(
                 AddBinDialog(
                     onDismiss = { showDialog = false },
                     onAddBinSuccess = { newBin ->
-                        bins.add(newBin)
-                        databaseHelper.insertBin(newBin)
+                        if (bins.none { it.id == newBin.id }) {
+                            bins.add(newBin)
+                            databaseHelper.insertBin(newBin)
+                        }
                         showDialog = false
                     }
                 )
@@ -160,13 +165,15 @@ fun HomeScreen(
                     bin = bin,
                     onDismiss = { showEditDialog = null },
                     onEditBinSuccess = { updatedBin ->
-                        bins[bins.indexOf(bin)] = updatedBin
-                        databaseHelper.updateBin(updatedBin)
+                        val index = bins.indexOfFirst { it.id == updatedBin.id }
+                        if (index != -1) {
+                            bins[index] = updatedBin
+                            databaseHelper.updateBin(updatedBin)
+                        }
                         showEditDialog = null
                     }
                 )
             }
-
 
             binToDelete?.let { bin ->
                 DeleteBinDialog(
