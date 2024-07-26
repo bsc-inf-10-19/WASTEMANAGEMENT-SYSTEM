@@ -317,11 +317,12 @@ fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> U
         }
     }
 }
+
 @SuppressLint("ClickableViewAccessibility")
 @Composable
 fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
+    var binId by remember { mutableStateOf("") }
     var binName by remember { mutableStateOf("") }
-    var binLocation by remember { mutableStateOf("") }
     var binLatitude by remember { mutableStateOf(-15.39628) }
     var binLongitude by remember { mutableStateOf(35.33640) }
     var selectedTab by remember { mutableStateOf(0) }
@@ -361,15 +362,15 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
                     0 -> {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
                             OutlinedTextField(
-                                value = binName,
-                                onValueChange = { binName = it },
+                                value = binId,
+                                onValueChange = { binId = it },
                                 label = { Text("Bin ID") },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
-                                value = binLocation,
-                                onValueChange = { binLocation = it },
+                                value = binName,
+                                onValueChange = { binName = it },
                                 label = { Text("Bin Name") },
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -420,8 +421,8 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
                         Text("Cancel")
                     }
                     Button(onClick = {
-                        if (binName.isNotBlank() && binLocation.isNotBlank()) {
-                            val newBin = Bin(binName, binLocation, R.drawable.bin_profile, binLatitude, binLongitude)
+                        if (binId.isNotBlank() && binName.isNotBlank()) {
+                            val newBin = Bin(binId, binName, R.drawable.bin_profile, binLatitude, binLongitude)
                             onAddBinSuccess(newBin)
                             onDismiss()
                             Toast.makeText(context, "Bin added successfully", Toast.LENGTH_SHORT).show()
@@ -436,6 +437,7 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
         }
     }
 }
+
 @SuppressLint("ClickableViewAccessibility")
 @Composable
 fun EditBinDialog(
@@ -443,6 +445,7 @@ fun EditBinDialog(
     onDismiss: () -> Unit,
     onEditBinSuccess: (Bin) -> Unit
 ) {
+    var binId by remember { mutableStateOf(bin.id) }
     var binName by remember { mutableStateOf(bin.name) }
     var binLatitude by remember { mutableStateOf(bin.latitude) }
     var binLongitude by remember { mutableStateOf(bin.longitude) }
@@ -482,6 +485,14 @@ fun EditBinDialog(
                 when (selectedTab) {
                     0 -> {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
+                            OutlinedTextField(
+                                value = binId,
+                                onValueChange = { binId = it },
+                                label = { Text("Bin ID") },
+                                readOnly = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = binName,
                                 onValueChange = { binName = it },
@@ -555,6 +566,8 @@ fun EditBinDialog(
         }
     }
 }
+
+
 
 
 data class ChartEntry(val index: Float, val value: Float, val timestamp: Long)

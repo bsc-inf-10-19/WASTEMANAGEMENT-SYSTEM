@@ -1,10 +1,9 @@
 package com.example.myapplicationwmsystem.Screens
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
@@ -126,14 +125,23 @@ fun HomeScreen(
                             .padding(vertical = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        bins.forEach { bin ->
-                            HomeScreenItem(
-                                imageRes = bin.imageRes,
-                                text = bin.name,
-                                onClick = { navController.navigate("bin_detail_screen/${bin.id}") },
-                                onEdit = { showEditDialog = bin },
-                                onDelete = { binToDelete = bin }
-                            )
+                        LazyColumn {
+                            items(bins) { bin ->
+                                HomeScreenItem(
+                                    imageRes = bin.imageRes,
+                                    binId = bin.id,
+                                    binName = bin.name,
+                                    onClick = { navController.navigate("bin_detail_screen/${bin.id}") },
+                                    onEdit = { showEditDialog = bin },
+                                    onDelete = { binToDelete = bin }
+                                )
+                                Divider(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp)
+                                )
+                            }
+
                         }
                     }
                 }

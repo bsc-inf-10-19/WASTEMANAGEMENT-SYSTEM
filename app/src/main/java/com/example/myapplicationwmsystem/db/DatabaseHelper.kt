@@ -147,6 +147,46 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return bins
     }
 
+    fun getBinById(id: String): Bin? {
+        val db = readableDatabase
+        val projection = arrayOf(
+            BinContract.BinEntry.COLUMN_NAME_ID,
+            BinContract.BinEntry.COLUMN_NAME_NAME,
+            BinContract.BinEntry.COLUMN_NAME_IMAGE_RES,
+            BinContract.BinEntry.COLUMN_NAME_LATITUDE,
+            BinContract.BinEntry.COLUMN_NAME_LONGITUDE,
+            BinContract.BinEntry.COLUMN_NAME_GARBAGE_LEVEL
+        )
+        val selection = "${BinContract.BinEntry.COLUMN_NAME_ID} = ?"
+        val selectionArgs = arrayOf(id)
+
+        val cursor: Cursor = db.query(
+            BinContract.BinEntry.TABLE_NAME,
+            projection,
+            selection,
+            selectionArgs,
+            null,
+            null,
+            null
+        )
+
+        return if (cursor.moveToFirst()) {
+            Bin(
+                id = cursor.getString(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_ID)),
+                name = cursor.getString(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_NAME)),
+                imageRes = cursor.getInt(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_IMAGE_RES)),
+                latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_LATITUDE)),
+                longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_LONGITUDE)),
+                garbageLevel = cursor.getInt(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_GARBAGE_LEVEL))
+            )
+        } else {
+            null
+        }.also {
+            cursor.close()
+            db.close()
+        }
+    }
+
     fun insertGarbageLevel(entry: GarbageLevelEntry): Long {
         val db = writableDatabase
         val values = ContentValues().apply {
@@ -232,11 +272,8 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         val db = writableDatabase
         val selection = "${BinContract.BinEntry.COLUMN_NAME_ID} = ?"
         val selectionArgs = arrayOf(id)
-
-        // Delete the bin from the 'bins' table
         val deletedRows = db.delete(BinContract.BinEntry.TABLE_NAME, selection, selectionArgs)
 
-        // Optionally, delete related garbage levels from the 'garbage_levels' table
         db.delete(GarbageLevelContract.GarbageLevelEntry.TABLE_NAME, "${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID} = ?", arrayOf(id))
 
         db.close()
@@ -255,8 +292,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         }
         val selection = "${BinContract.BinEntry.COLUMN_NAME_ID} = ?"
         val selectionArgs = arrayOf(bin.id)
-
-        // Update the bin in the 'bins' table
         val updatedRows = db.update(BinContract.BinEntry.TABLE_NAME, values, selection, selectionArgs)
 
         db.close()

@@ -3,6 +3,7 @@ package com.example.myapplicationwmsystem.Components
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,11 +28,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplicationwmsystem.EditDeleteDropdownMenu
 
-
 @Composable
 fun HomeScreenItem(
     imageRes: Int,
-    text: String,
+    binId: String,
+    binName: String,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -51,7 +52,10 @@ fun HomeScreenItem(
             modifier = Modifier.size(48.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text = text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        Column {
+            Text(text = binId, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Text(text = binName, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+        }
         Spacer(modifier = Modifier.weight(1f))
         Box {
             IconButton(onClick = { expanded = true }) {

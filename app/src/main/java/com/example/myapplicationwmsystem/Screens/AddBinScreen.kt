@@ -73,19 +73,24 @@ fun AddBinScreen(databaseHelper: DatabaseHelper, onAddBinSuccess: (Bin) -> Unit)
                     val latitude = binLatitude.toDoubleOrNull()
                     val longitude = binLongitude.toDoubleOrNull()
                     if (latitude != null && longitude != null) {
-                        val newBin = Bin(
-                            id = binId,
-                            name = "$binName\n$binLocation",
-                            imageRes = R.drawable.bin_profile,
-                            latitude = latitude,
-                            longitude = longitude
-                        )
-                        val newRowId = databaseHelper.insertBin(newBin)
-                        if (newRowId != -1L) {
-                            Toast.makeText(context, "Bin added successfully", Toast.LENGTH_SHORT).show()
-                            onAddBinSuccess(newBin)
+                        val existingBin = databaseHelper.getBinById(binId)
+                        if (existingBin == null) {
+                            val newBin = Bin(
+                                id = binId,
+                                name = "$binName\n$binLocation",
+                                imageRes = R.drawable.bin_profile,
+                                latitude = latitude,
+                                longitude = longitude
+                            )
+                            val newRowId = databaseHelper.insertBin(newBin)
+                            if (newRowId != -1L) {
+                                Toast.makeText(context, "Bin added successfully", Toast.LENGTH_SHORT).show()
+                                onAddBinSuccess(newBin)
+                            } else {
+                                Toast.makeText(context, "Failed to add bin to database", Toast.LENGTH_SHORT).show()
+                            }
                         } else {
-                            Toast.makeText(context, "Failed to add bin to database", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Bin ID already exists", Toast.LENGTH_SHORT).show() // Bin ID exists
                         }
                     } else {
                         Toast.makeText(context, "Invalid latitude or longitude", Toast.LENGTH_SHORT).show()

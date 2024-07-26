@@ -52,11 +52,12 @@ fun SearchScreen(
                 .padding(16.dp)
         )
         LazyColumn {
-            items(filteredBins) { bin ->
+            items(bins) { bin ->
                 HomeScreenItem(
                     imageRes = bin.imageRes,
-                    text = bin.name,
-                    onClick = { onBinClick(bin) },
+                    binId = bin.id,
+                    binName = bin.name,
+                    onClick = { navController.navigate("bin_detail_screen/${bin.id}") },
                     onEdit = { showEditDialog = bin },
                     onDelete = { binToDelete = bin }
                 )
