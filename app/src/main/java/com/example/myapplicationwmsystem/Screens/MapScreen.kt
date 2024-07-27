@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.example.myapplicationwmsystem.R
 import com.example.myapplicationwmsystem.db.Bin
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
@@ -14,13 +15,16 @@ import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
 import com.mapbox.maps.plugin.animation.flyTo
 import com.mapbox.maps.plugin.annotation.annotations
-import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.mapbox.maps.plugin.gestures.addOnMapClickListener
 import com.mapbox.turf.TurfMeasurement
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
+import androidx.core.content.ContextCompat
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 
 @Composable
 fun MapScreen(bins: List<Bin>) {
@@ -30,7 +34,20 @@ fun MapScreen(bins: List<Bin>) {
     val zombaLongitude = 35.3333
     val selectedBinName = remember { mutableStateOf<String?>(null) }
     val distanceInfo = remember { mutableStateOf<String?>(null) }
-    val predefinedLocation = Point.fromLngLat(35.33678641198779, -15.387608019953023)
+    val predefinedLocation = Point.fromLngLat(-15.38454707571864, 35.318546167716825)
+
+    // Create bitmaps for bin and truck icons
+    val binIconBitmap = remember {
+        val drawable = ContextCompat.getDrawable(context, R.drawable.bin_profile)
+        val bitmap = (drawable as BitmapDrawable).bitmap
+        Bitmap.createScaledBitmap(bitmap, 50, 50, true)
+    }
+
+    val truckIconBitmap = remember {
+        val drawable = ContextCompat.getDrawable(context, R.drawable.garbage_truck)
+        val bitmap = (drawable as BitmapDrawable).bitmap
+        Bitmap.createScaledBitmap(bitmap, 60, 60, true) // Slightly larger than bin icon
+    }
 
     AndroidView(
         factory = { ctx ->
@@ -46,12 +63,13 @@ fun MapScreen(bins: List<Bin>) {
                 val annotationApi = annotations
                 val pointAnnotationManager = annotationApi.createPointAnnotationManager()
 
+                // Add bin markers
                 bins.forEach { bin ->
-                    val pointAnnotationOptions = PointAnnotationOptions()
-                        .withPoint(Point.fromLngLat(bin.longitude, bin.latitude))
-                        .withTextField(bin.name)
-                    pointAnnotationManager.create(pointAnnotationOptions)
+                    addBinMarker(pointAnnotationManager, bin, binIconBitmap)
                 }
+
+                // Add truck marker for predefined location
+                addTruckMarker(pointAnnotationManager, predefinedLocation, truckIconBitmap)
 
                 getMapboxMap().addOnMapClickListener { point ->
                     val clickedBin = bins.minByOrNull { bin ->
@@ -71,13 +89,11 @@ fun MapScreen(bins: List<Bin>) {
                     }
                     true
                 }
-
                 mapViewState.value = this
             }
         },
         modifier = Modifier.fillMaxSize()
     )
-
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -111,7 +127,7 @@ fun MapScreen(bins: List<Bin>) {
                 mapViewState.value?.getMapboxMap()?.flyTo(
                     CameraOptions.Builder()
                         .center(Point.fromLngLat(zombaLongitude, zombaLatitude))
-                        .zoom(14.0)
+                        .zoom(18.0)
                         .build()
                 )
             }) {
@@ -152,3 +168,26 @@ fun MapScreen(bins: List<Bin>) {
         }
     }
 }
+
+private fun addBinMarker(manager: PointAnnotationManager, bin: Bin, icon: Bitmap) {
+    val pointAnnotationOptions = PointAnnotationOptions()
+        .withPoint(Point.fromLngLat(bin.longitude, bin.latitude))
+        .withTextField(bin.name)
+        .withIconImage(icon)
+        .withIconSize(1.0)
+        .withIconOffset(listOf(0.0, -25.0))
+
+    manager.create(pointAnnotationOptions)
+}
+
+private fun addTruckMarker(manager: PointAnnotationManager, location: Point, icon: Bitmap) {
+    val pointAnnotationOptions = PointAnnotationOptions()
+        .withPoint(location)
+        .withTextField("Predefined Location")
+        .withIconImage(icon)
+        .withIconSize(1.0)
+        .withIconOffset(listOf(0.0, -30.0))
+
+    manager.create(pointAnnotationOptions)
+}
+

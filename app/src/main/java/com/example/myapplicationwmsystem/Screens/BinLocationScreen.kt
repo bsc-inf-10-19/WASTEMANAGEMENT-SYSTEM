@@ -10,48 +10,54 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import org.osmdroid.config.Configuration
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.Marker
+import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
+import com.mapbox.maps.MapView
+import com.mapbox.maps.Style
+import com.mapbox.maps.plugin.animation.flyTo
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 
 @Composable
 fun BinLocationScreen(binId: String) {
     val context = LocalContext.current
-    val mapView = remember { MapView(context) }
+    val mapViewState = remember { mutableStateOf<MapView?>(null) }
+    val binLocation = Point.fromLngLat(35.33640, -15.39628) // Longitude first, then Latitude
 
-    // Initialize the mapView in a LaunchedEffect to ensure it's only done once
-    LaunchedEffect(Unit) {
-        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
-        mapView.setTileSource(TileSourceFactory.MAPNIK)
-        mapView.controller.setZoom(15.0)
-        mapView.controller.setCenter(GeoPoint(-15.39628, 35.33640))
-        val marker = Marker(mapView).apply {
-            position = GeoPoint(-15.39628, 35.33640)
-            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-            title = "Bin Location - Bin $binId"
-            setOnMarkerClickListener { marker, _ ->
-                mapView.controller.animateTo(marker.position, 20.0, 1000L)
-                true
+    AndroidView(
+        factory = { ctx ->
+            MapView(ctx).apply {
+                getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS)
+                getMapboxMap().setCamera(
+                    CameraOptions.Builder()
+                        .center(binLocation)
+                        .zoom(15.0)
+                        .build()
+                )
+
+                val annotationApi = annotations
+                val pointAnnotationManager = annotationApi.createPointAnnotationManager()
+
+                val pointAnnotationOptions = PointAnnotationOptions()
+                    .withPoint(binLocation)
+                    .withTextField("Bin Location - Bin $binId")
+                pointAnnotationManager.create(pointAnnotationOptions)
+
+                mapViewState.value = this
             }
-        }
-        mapView.overlays.add(marker)
-    }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
-        AndroidView(
-            factory = { mapView },
-            modifier = Modifier.fillMaxSize()
-        )
-
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.End,
@@ -61,20 +67,37 @@ fun BinLocationScreen(binId: String) {
         ) {
             Button(
                 onClick = {
-                    mapView.controller.animateTo(GeoPoint(-15.39628, 35.33640), 15.0, 1000L)
+                    mapViewState.value?.getMapboxMap()?.flyTo(
+                        CameraOptions.Builder()
+                            .center(binLocation)
+                            .zoom(15.0)
+                            .build()
+                    )
                 },
                 shape = MaterialTheme.shapes.small
             ) {
                 Text("Reset View", style = MaterialTheme.typography.labelMedium)
             }
             Button(
-                onClick = { mapView.controller.zoomIn() },
+                onClick = {
+                    mapViewState.value?.getMapboxMap()?.cameraState?.zoom?.let { currentZoom ->
+                        mapViewState.value?.getMapboxMap()?.flyTo(
+                            CameraOptions.Builder().zoom(currentZoom + 1).build()
+                        )
+                    }
+                },
                 shape = MaterialTheme.shapes.small
             ) {
                 Text("Zoom In", style = MaterialTheme.typography.labelMedium)
             }
             Button(
-                onClick = { mapView.controller.zoomOut() },
+                onClick = {
+                    mapViewState.value?.getMapboxMap()?.cameraState?.zoom?.let { currentZoom ->
+                        mapViewState.value?.getMapboxMap()?.flyTo(
+                            CameraOptions.Builder().zoom(currentZoom - 1).build()
+                        )
+                    }
+                },
                 shape = MaterialTheme.shapes.small
             ) {
                 Text("Zoom Out", style = MaterialTheme.typography.labelMedium)
