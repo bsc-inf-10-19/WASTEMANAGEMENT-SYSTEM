@@ -24,6 +24,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplicationwmsystem.db.DatabaseHelper
+import com.example.myapplicationwmsystem.db.GarbageLevelEntry
 import com.example.myapplicationwmsystem.fetchGarbageLevelFromThingSpeak
 import com.example.myapplicationwmsystem.showNotification
 import kotlinx.coroutines.delay
@@ -34,22 +36,31 @@ fun GarbageLevelScreen(binId: String) {
     var garbageLevel by remember { mutableStateOf(0) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val databaseHelper = remember { DatabaseHelper(context) }
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
             while (true) {
                 try {
-                    garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
+                    var garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
+                    val timestamp = System.currentTimeMillis()
+
+                    saveGarbageLevelToDatabase(databaseHelper, binId, garbageLevel, timestamp)
+
+                    // Update UI if needed based on the latest garbage level
+                    garbageLevel = garbageLevel // Update the garbage level state
+
                     if (garbageLevel > 80) {
                         showNotification(context, garbageLevel)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                delay(3000)
+                delay(3000) // Fetch every 3 seconds
             }
         }
     }
+
 
     val progressBarColor = when {
         garbageLevel > 70 -> Color.Red
@@ -85,4 +96,9 @@ fun GarbageLevelScreen(binId: String) {
             color = MaterialTheme.colorScheme.secondary
         )
     }
+}
+
+private fun saveGarbageLevelToDatabase(databaseHelper: DatabaseHelper, binId: String, garbageLevel: Int, timestamp: Long) {
+    val entry = GarbageLevelEntry(binId, garbageLevel, timestamp)
+    databaseHelper.insertGarbageLevel(entry)
 }
