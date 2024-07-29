@@ -42,16 +42,15 @@ fun GarbageLevelScreen(binId: String) {
         coroutineScope.launch {
             while (true) {
                 try {
-                    var garbageLevel = fetchGarbageLevelFromThingSpeak(binId)
+                    val fetchedGarbageLevel = fetchGarbageLevelFromThingSpeak(binId)
                     val timestamp = System.currentTimeMillis()
 
-                    saveGarbageLevelToDatabase(databaseHelper, binId, garbageLevel, timestamp)
+                    saveGarbageLevelToDatabase(databaseHelper, binId, fetchedGarbageLevel, timestamp)
 
-                    // Update UI if needed based on the latest garbage level
-                    garbageLevel = garbageLevel // Update the garbage level state
+                    garbageLevel = fetchedGarbageLevel // Update the garbage level state
 
-                    if (garbageLevel > 80) {
-                        showNotification(context, garbageLevel)
+                    if (fetchedGarbageLevel > 80) {
+                        showNotification(context, fetchedGarbageLevel)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
