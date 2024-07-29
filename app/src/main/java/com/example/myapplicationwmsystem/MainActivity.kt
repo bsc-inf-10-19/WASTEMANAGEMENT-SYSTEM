@@ -102,6 +102,7 @@ class MainActivity : ComponentActivity() {
         createNotificationChannel()
         requestNotificationPermission()
 
+
         databaseHelper = DatabaseHelper(this)
 
         setContent {

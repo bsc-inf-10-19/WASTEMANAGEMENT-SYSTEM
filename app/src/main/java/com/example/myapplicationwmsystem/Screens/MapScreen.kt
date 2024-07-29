@@ -1,16 +1,8 @@
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -20,9 +12,7 @@ import androidx.core.content.ContextCompat
 import com.example.myapplicationwmsystem.R
 import com.example.myapplicationwmsystem.db.Bin
 import com.mapbox.geojson.Point
-import com.mapbox.maps.CameraOptions
-import com.mapbox.maps.MapView
-import com.mapbox.maps.Style
+import com.mapbox.maps.*
 import com.mapbox.maps.plugin.animation.flyTo
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
@@ -37,12 +27,22 @@ fun MapScreen(bins: List<Bin>) {
     val mapViewState = remember { mutableStateOf<MapView?>(null) }
     val zombaLatitude = -15.3833
     val zombaLongitude = 35.3333
-    val truckLatitude = -15.384507010964562  // Specific latitude for the truck within Zomba
-    val truckLongitude = 35.31856127816891 // Specific longitude for the truck within Zomba
+    val truckLatitude = -15.384507010964562
+    val truckLongitude = 35.31856127816891
     val selectedBinName = remember { mutableStateOf<String?>(null) }
     val distanceInfo = remember { mutableStateOf<String?>(null) }
     val predefinedLocation = Point.fromLngLat(truckLongitude, truckLatitude)
     val initialZoom = 14.0
+
+    val mapStyles = listOf(
+        Style.MAPBOX_STREETS,
+        Style.SATELLITE,
+        Style.SATELLITE_STREETS,
+        Style.OUTDOORS,
+        Style.LIGHT,
+        Style.DARK
+    )
+    val currentStyleIndex = remember { mutableStateOf(0) }
 
     // Create bitmaps for bin and truck icons
     val binIconBitmap = remember {
@@ -53,13 +53,13 @@ fun MapScreen(bins: List<Bin>) {
     val truckIconBitmap = remember {
         val drawable = ContextCompat.getDrawable(context, R.drawable.garbage_truck)
         val bitmap = (drawable as BitmapDrawable).bitmap
-        Bitmap.createScaledBitmap(bitmap, 70, 70, true) // Slightly larger than bin icon
+        Bitmap.createScaledBitmap(bitmap, 70, 70, true)
     }
 
     AndroidView(
         factory = { ctx ->
             MapView(ctx).apply {
-                mapboxMap.loadStyleUri(Style.MAPBOX_STREETS)
+                mapboxMap.loadStyleUri(mapStyles[currentStyleIndex.value])
                 mapboxMap.setCamera(
                     CameraOptions.Builder()
                         .center(Point.fromLngLat(zombaLongitude, zombaLatitude))
@@ -129,6 +129,12 @@ fun MapScreen(bins: List<Bin>) {
                 .align(Alignment.BottomEnd)
                 .padding(16.dp)
         ) {
+            Button(onClick = {
+                currentStyleIndex.value = (currentStyleIndex.value + 1) % mapStyles.size
+                mapViewState.value?.mapboxMap?.loadStyleUri(mapStyles[currentStyleIndex.value])
+            }) {
+                Text("Change Style")
+            }
             Button(onClick = {
                 mapViewState.value?.mapboxMap?.flyTo(
                     CameraOptions.Builder()
