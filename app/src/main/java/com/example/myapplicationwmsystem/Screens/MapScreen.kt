@@ -1,5 +1,9 @@
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.drawable.BitmapDrawable
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +17,7 @@ import com.example.myapplicationwmsystem.R
 import com.example.myapplicationwmsystem.db.Bin
 import com.mapbox.geojson.Point
 import com.mapbox.maps.*
+import kotlin.math.roundToInt
 import com.mapbox.maps.plugin.animation.flyTo
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
@@ -186,11 +191,13 @@ fun MapScreen(bins: List<Bin>) {
             }) {
                 Text("Zoom Out")
             }
+
             Button(onClick = {
                 val binToRoute = selectedBin.value ?: bins.minByOrNull { bin ->
                     TurfMeasurement.distance(
                         predefinedLocation,
-                        Point.fromLngLat(bin.longitude, bin.latitude)
+                        Point.fromLngLat(bin.longitude, bin.latitude),
+                        "kilometers"
                     )
                 }
                 binToRoute?.let { bin ->
@@ -202,11 +209,11 @@ fun MapScreen(bins: List<Bin>) {
                         mapViewState.value?.let { mapView ->
                             displayRoute(mapView, coordinates)
                         }
-                        val distance = TurfMeasurement.distance(
-                            predefinedLocation,
-                            Point.fromLngLat(bin.longitude, bin.latitude)
+                        val distance = TurfMeasurement.length(
+                            LineString.fromLngLats(coordinates),
+                            "kilometers"
                         )
-                        distanceInfo.value = "Distance to ${bin.name}: ${distance.toInt()} meters"
+                        distanceInfo.value = "Distance to ${bin.name}: ${(distance * 1000).roundToInt()} meters"
                     }
                 }
             }) {
@@ -236,13 +243,14 @@ private fun addTruckMarker(manager: PointAnnotationManager, location: Point, ico
         .withIconOffset(listOf(0.0, -30.0))
 
     manager.create(pointAnnotationOptions)
-}
-private fun calculateRoute(start: Point, end: Point, onRouteReady: (List<Point>) -> Unit) {
+}private fun calculateRoute(start: Point, end: Point, onRouteReady: (List<Point>) -> Unit) {
     val client = MapboxDirections.builder()
         .origin(start)
         .destination(end)
         .overview(DirectionsCriteria.OVERVIEW_FULL)
         .profile(DirectionsCriteria.PROFILE_DRIVING)
+        .steps(true)
+        .geometries(DirectionsCriteria.GEOMETRY_POLYLINE6)
         .accessToken(MapboxAccessToken.VALUE)
         .build()
 
@@ -265,20 +273,27 @@ private fun calculateRoute(start: Point, end: Point, onRouteReady: (List<Point>)
             // Handle network errors
         }
     })
-}
-private fun displayRoute(mapView: MapView, coordinates: List<Point>) {
+}private fun displayRoute(mapView: MapView, coordinates: List<Point>) {
     mapView.getMapboxMap().getStyle { style ->
+        // Remove existing route annotations
+        mapView.annotations.cleanup()
+
         val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
-        val polylineAnnotationOptions = PolylineAnnotationOptions()
+
+        // Create outline for the route
+        val outlineOptions = PolylineAnnotationOptions()
             .withPoints(coordinates)
-            .withLineColor("#3887be")
-            .withLineWidth(5.0)
-        polylineAnnotationManager.create(polylineAnnotationOptions)
+            .withLineColor("#000000") // Black outline
+            .withLineWidth(8.0)
+        polylineAnnotationManager.create(outlineOptions)
+
+        // Animate the route drawing
+        animateRouteDraw(mapView, coordinates)
 
         // Adjust camera to show the entire route
         val cameraPosition = mapView.getMapboxMap().cameraForCoordinates(
             coordinates,
-            EdgeInsets(50.0, 50.0, 50.0, 50.0),
+            EdgeInsets(100.0, 100.0, 100.0, 100.0),
             null,
             null
         )
@@ -294,6 +309,7 @@ private fun displayRoute(mapView: MapView, coordinates: List<Point>) {
         )
     }
 }
+
 fun List<Point>.boundingBox(): Pair<Point, Point> {
     if (isEmpty()) throw IllegalArgumentException("List of points is empty")
 
@@ -313,4 +329,88 @@ fun List<Point>.boundingBox(): Pair<Point, Point> {
         Point.fromLngLat(minLon, minLat),
         Point.fromLngLat(maxLon, maxLat)
     )
+}
+private fun animateRouteDraw(mapView: MapView, coordinates: List<Point>) {
+    val handler = Handler(Looper.getMainLooper())
+    var index = 0
+    val delay: Long = 50 // milliseconds
+
+    val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
+
+    val runnable = object : Runnable {
+        override fun run() {
+            if (index < coordinates.size) {
+                val currentLine = coordinates.subList(0, index + 1)
+
+                // Remove previous line
+                polylineAnnotationManager.deleteAll()
+
+                // Draw new line
+                val routeOptions = PolylineAnnotationOptions()
+                    .withPoints(currentLine)
+                    .withLineColor("#4CAF50") // Material Design Green
+                    .withLineWidth(5.0)
+                polylineAnnotationManager.create(routeOptions)
+
+                index++
+                handler.postDelayed(this, delay)
+            }
+        }
+    }
+
+    handler.post(runnable)
+}
+private fun addRouteMarkers(mapView: MapView, start: Point, end: Point) {
+    val pointAnnotationManager = mapView.annotations.createPointAnnotationManager()
+
+    // Create smaller bitmaps for the markers
+    val startBitmap = createResizedBitmap(mapView.context, R.drawable.start, 40, 40)
+    val endBitmap = createResizedBitmap(mapView.context, R.drawable.start, 40, 40)
+
+    // Start point marker
+    val startOptions = PointAnnotationOptions()
+        .withPoint(start)
+        .withIconImage(startBitmap)
+        .withIconOffset(listOf(0.0, -20.0))  // Offset to align bottom center of the icon with the point
+    pointAnnotationManager.create(startOptions)
+
+    // End point marker
+    val endOptions = PointAnnotationOptions()
+        .withPoint(end)
+        .withIconImage(endBitmap)
+        .withIconOffset(listOf(0.0, -20.0))  // Offset to align bottom center of the icon with the point
+    pointAnnotationManager.create(endOptions)
+}
+
+// Helper function to resize bitmaps
+private fun createResizedBitmap(context: Context, resourceId: Int, width: Int, height: Int): Bitmap {
+    val options = BitmapFactory.Options().apply {
+        inJustDecodeBounds = true
+    }
+    BitmapFactory.decodeResource(context.resources, resourceId, options)
+
+    val sampleSize = calculateInSampleSize(options, width, height)
+    options.apply {
+        inJustDecodeBounds = false
+        inSampleSize = sampleSize
+    }
+
+    val bitmap = BitmapFactory.decodeResource(context.resources, resourceId, options)
+    return Bitmap.createScaledBitmap(bitmap, width, height, true)
+}
+
+private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    val (height: Int, width: Int) = options.run { outHeight to outWidth }
+    var inSampleSize = 1
+
+    if (height > reqHeight || width > reqWidth) {
+        val halfHeight: Int = height / 2
+        val halfWidth: Int = width / 2
+
+        while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+            inSampleSize *= 2
+        }
+    }
+
+    return inSampleSize
 }
