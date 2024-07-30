@@ -18,8 +18,20 @@ import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
 import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
 import com.mapbox.maps.plugin.gestures.addOnMapClickListener
 import com.mapbox.turf.TurfMeasurement
+import com.mapbox.api.directions.v5.DirectionsCriteria
+import com.mapbox.api.directions.v5.MapboxDirections
+import com.mapbox.api.directions.v5.models.DirectionsResponse
+import com.mapbox.geojson.LineString
+import com.example.myapplicationwmsystem.Components.MapboxAccessToken
+
+
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 @Composable
 fun MapScreen(bins: List<Bin>) {
@@ -33,7 +45,6 @@ fun MapScreen(bins: List<Bin>) {
     val distanceInfo = remember { mutableStateOf<String?>(null) }
     val predefinedLocation = Point.fromLngLat(truckLongitude, truckLatitude)
     val initialZoom = 14.0
-
     val mapStyles = listOf(
         Style.MAPBOX_STREETS,
         Style.SATELLITE,
@@ -43,6 +54,8 @@ fun MapScreen(bins: List<Bin>) {
         Style.DARK
     )
     val currentStyleIndex = remember { mutableStateOf(0) }
+    val selectedBin = remember { mutableStateOf<Bin?>(null) }
+    val routeCoordinates = remember { mutableStateOf<List<Point>?>(null) }
 
     // Create bitmaps for bin and truck icons
     val binIconBitmap = remember {
@@ -85,6 +98,7 @@ fun MapScreen(bins: List<Bin>) {
                         )
                     }
                     clickedBin?.let {
+                        selectedBin.value = it
                         selectedBinName.value = it.name
                         mapboxMap.flyTo(
                             CameraOptions.Builder()
@@ -146,6 +160,11 @@ fun MapScreen(bins: List<Bin>) {
                 )
                 selectedBinName.value = null
                 distanceInfo.value = null
+                selectedBin.value = null
+                routeCoordinates.value = null
+                mapViewState.value?.let { mapView ->
+                    mapView.annotations.cleanup()
+                }
             }) {
                 Text("Reset View")
             }
@@ -168,15 +187,27 @@ fun MapScreen(bins: List<Bin>) {
                 Text("Zoom Out")
             }
             Button(onClick = {
-                val distances = bins.map { bin ->
-                    val binLocation = Point.fromLngLat(bin.longitude, bin.latitude)
-                    val distance = TurfMeasurement.distance(predefinedLocation, binLocation)
-                    Triple(bin.name, distance, binLocation)
+                val binToRoute = selectedBin.value ?: bins.minByOrNull { bin ->
+                    TurfMeasurement.distance(
+                        predefinedLocation,
+                        Point.fromLngLat(bin.longitude, bin.latitude)
+                    )
                 }
-                val closestBin = distances.minByOrNull { it.second }
-                closestBin?.let { (name, distance, location) ->
-                    distanceInfo.value = "Closest bin: $name (${distance.toInt()} meters)"
-                    // Note: Mapbox Directions API requires additional setup and is not included in this example
+                binToRoute?.let { bin ->
+                    calculateRoute(
+                        predefinedLocation,
+                        Point.fromLngLat(bin.longitude, bin.latitude)
+                    ) { coordinates ->
+                        routeCoordinates.value = coordinates
+                        mapViewState.value?.let { mapView ->
+                            displayRoute(mapView, coordinates)
+                        }
+                        val distance = TurfMeasurement.distance(
+                            predefinedLocation,
+                            Point.fromLngLat(bin.longitude, bin.latitude)
+                        )
+                        distanceInfo.value = "Distance to ${bin.name}: ${distance.toInt()} meters"
+                    }
                 }
             }) {
                 Text("See Route")
@@ -205,4 +236,81 @@ private fun addTruckMarker(manager: PointAnnotationManager, location: Point, ico
         .withIconOffset(listOf(0.0, -30.0))
 
     manager.create(pointAnnotationOptions)
+}
+private fun calculateRoute(start: Point, end: Point, onRouteReady: (List<Point>) -> Unit) {
+    val client = MapboxDirections.builder()
+        .origin(start)
+        .destination(end)
+        .overview(DirectionsCriteria.OVERVIEW_FULL)
+        .profile(DirectionsCriteria.PROFILE_DRIVING)
+        .accessToken(MapboxAccessToken.VALUE)
+        .build()
+
+    client.enqueueCall(object : Callback<DirectionsResponse> {
+        override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
+            val body = response.body()
+            if (body == null || body.routes().isEmpty()) {
+                // Handle error
+                return
+            }
+            val route = body.routes()[0]
+            val geometry = route.geometry()
+            if (geometry != null) {
+                val coordinates = LineString.fromPolyline(geometry, 6).coordinates()
+                onRouteReady(coordinates)
+            }
+        }
+
+        override fun onFailure(call: Call<DirectionsResponse>, t: Throwable) {
+            // Handle network errors
+        }
+    })
+}
+private fun displayRoute(mapView: MapView, coordinates: List<Point>) {
+    mapView.getMapboxMap().getStyle { style ->
+        val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
+        val polylineAnnotationOptions = PolylineAnnotationOptions()
+            .withPoints(coordinates)
+            .withLineColor("#3887be")
+            .withLineWidth(5.0)
+        polylineAnnotationManager.create(polylineAnnotationOptions)
+
+        // Adjust camera to show the entire route
+        val cameraPosition = mapView.getMapboxMap().cameraForCoordinates(
+            coordinates,
+            EdgeInsets(50.0, 50.0, 50.0, 50.0),
+            null,
+            null
+        )
+
+        mapView.getMapboxMap().flyTo(
+            CameraOptions.Builder()
+                .center(cameraPosition.center)
+                .zoom(cameraPosition.zoom)
+                .bearing(cameraPosition.bearing)
+                .pitch(cameraPosition.pitch)
+                .padding(cameraPosition.padding)
+                .build()
+        )
+    }
+}
+fun List<Point>.boundingBox(): Pair<Point, Point> {
+    if (isEmpty()) throw IllegalArgumentException("List of points is empty")
+
+    var minLat = Double.MAX_VALUE
+    var minLon = Double.MAX_VALUE
+    var maxLat = -Double.MAX_VALUE
+    var maxLon = -Double.MAX_VALUE
+
+    forEach { point ->
+        minLat = minOf(minLat, point.latitude())
+        minLon = minOf(minLon, point.longitude())
+        maxLat = maxOf(maxLat, point.latitude())
+        maxLon = maxOf(maxLon, point.longitude())
+    }
+
+    return Pair(
+        Point.fromLngLat(minLon, minLat),
+        Point.fromLngLat(maxLon, maxLat)
+    )
 }

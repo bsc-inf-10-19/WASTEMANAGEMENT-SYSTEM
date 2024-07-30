@@ -10,6 +10,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
+
         applicationId = "com.example.myapplicationwmsystem"
         minSdk = 24
         targetSdk = 34
@@ -63,6 +64,8 @@ dependencies {
     freeDebugImplementation("com.mapbox.mapboxsdk:mapbox-android-services:4.7.0")
     freeDebugImplementation ("com.mapbox.navigation:ui-dropin:2.10.0")
 
+    implementation ("com.mapbox.mapboxsdk:mapbox-sdk-services:5.8.0")
+    implementation ("com.mapbox.mapboxsdk:mapbox-sdk-turf:5.8.0")
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")
     implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation ("androidx.compose.material:material:1.4.3")
