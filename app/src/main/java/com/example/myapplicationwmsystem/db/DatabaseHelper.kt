@@ -274,37 +274,39 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return entry
     }
 
-    fun getAllGarbageLevels(): List<GarbageLevelEntry> {
-        val entries = mutableListOf<GarbageLevelEntry>()
+    fun getGarbageLevelsByBinId(binId: String): List<GarbageLevelEntry> {
         val db = readableDatabase
+
         val projection = arrayOf(
             GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID,
             GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_GARBAGE_LEVEL,
             GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP
         )
 
-        val cursor: Cursor = db.query(
+        val selection = "${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID} = ?"
+        val selectionArgs = arrayOf(binId)
+
+        val cursor = db.query(
             GarbageLevelContract.GarbageLevelEntry.TABLE_NAME,
             projection,
+            selection,
+            selectionArgs,
             null,
             null,
-            null,
-            null,
-            null
+            "${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP} ASC"
         )
 
+        val entries = mutableListOf<GarbageLevelEntry>()
         with(cursor) {
             while (moveToNext()) {
-                val binId = getString(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID))
+                val entryBinId = getString(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID))
                 val garbageLevel = getInt(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_GARBAGE_LEVEL))
                 val timestamp = getLong(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP))
-
-                entries.add(GarbageLevelEntry(binId, garbageLevel, timestamp))
+                entries.add(GarbageLevelEntry(entryBinId, garbageLevel, timestamp))
             }
         }
         cursor.close()
-        db.close()
-        Log.d("DatabaseHelper", "Retrieved all garbage levels: ${entries.size}")
+
         return entries
     }
 

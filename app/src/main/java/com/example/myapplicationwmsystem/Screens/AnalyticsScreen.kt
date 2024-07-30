@@ -44,7 +44,7 @@ fun AnalyticsScreen(binId: String) {
                     saveGarbageLevelToDatabase(databaseHelper, binId, garbageLevel, timestamp)
 
                     // Fetch and filter data based on the selected tab index
-                    val filteredEntries = fetchGarbageLevelsFromDatabase(databaseHelper, selectedTabIndex)
+                    val filteredEntries = fetchGarbageLevelsFromDatabase(databaseHelper, binId, selectedTabIndex)
                     dataEntries = filteredEntries.mapIndexed { index, entry ->
                         ChartEntry(
                             index = index.toFloat(),
@@ -157,9 +157,9 @@ private fun saveGarbageLevelToDatabase(databaseHelper: DatabaseHelper, binId: St
     databaseHelper.insertGarbageLevel(entry)
 }
 
-private fun fetchGarbageLevelsFromDatabase(databaseHelper: DatabaseHelper, selectedTabIndex: Int): List<GarbageLevelEntry> {
+private fun fetchGarbageLevelsFromDatabase(databaseHelper: DatabaseHelper, binId: String, selectedTabIndex: Int): List<GarbageLevelEntry> {
     val currentTime = System.currentTimeMillis()
-    val allEntries = databaseHelper.getAllGarbageLevels()
+    val allEntries = databaseHelper.getGarbageLevelsByBinId(binId)
     return when (selectedTabIndex) {
         0 -> allEntries.filter { it.timestamp >= currentTime - 1.dayInMillis }
         1 -> allEntries.filter { it.timestamp >= currentTime - 1.weekInMillis }
