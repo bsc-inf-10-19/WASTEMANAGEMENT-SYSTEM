@@ -158,6 +158,7 @@ fun HomeScreen(
 
             if (showDialog) {
                 AddBinDialog(
+                    databaseHelper = databaseHelper,
                     onDismiss = { showDialog = false },
                     onAddBinSuccess = { newBin ->
                         if (bins.none { it.id == newBin.id }) {

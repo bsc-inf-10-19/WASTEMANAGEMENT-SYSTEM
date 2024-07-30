@@ -187,6 +187,46 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         }
     }
 
+    fun getBinByName(name: String): Bin? {
+        val db = readableDatabase
+        val projection = arrayOf(
+            BinContract.BinEntry.COLUMN_NAME_ID,
+            BinContract.BinEntry.COLUMN_NAME_NAME,
+            BinContract.BinEntry.COLUMN_NAME_IMAGE_RES,
+            BinContract.BinEntry.COLUMN_NAME_LATITUDE,
+            BinContract.BinEntry.COLUMN_NAME_LONGITUDE,
+            BinContract.BinEntry.COLUMN_NAME_GARBAGE_LEVEL
+        )
+        val selection = "${BinContract.BinEntry.COLUMN_NAME_NAME} = ?"
+        val selectionArgs = arrayOf(name)
+
+        val cursor: Cursor = db.query(
+            BinContract.BinEntry.TABLE_NAME,
+            projection,
+            selection,
+            selectionArgs,
+            null,
+            null,
+            null
+        )
+
+        return if (cursor.moveToFirst()) {
+            Bin(
+                id = cursor.getString(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_ID)),
+                name = cursor.getString(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_NAME)),
+                imageRes = cursor.getInt(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_IMAGE_RES)),
+                latitude = cursor.getDouble(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_LATITUDE)),
+                longitude = cursor.getDouble(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_LONGITUDE)),
+                garbageLevel = cursor.getInt(cursor.getColumnIndexOrThrow(BinContract.BinEntry.COLUMN_NAME_GARBAGE_LEVEL))
+            )
+        } else {
+            null
+        }.also {
+            cursor.close()
+            db.close()
+        }
+    }
+
     fun insertGarbageLevel(entry: GarbageLevelEntry): Long {
         val db = writableDatabase
         val values = ContentValues().apply {

@@ -75,6 +75,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import android.view.MotionEvent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Tab
@@ -321,12 +322,17 @@ fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> U
 
 @SuppressLint("ClickableViewAccessibility")
 @Composable
-fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
+fun AddBinDialog(
+    onDismiss: () -> Unit,
+    onAddBinSuccess: (Bin) -> Unit,
+    databaseHelper: DatabaseHelper
+) {
     var binId by remember { mutableStateOf("") }
     var binName by remember { mutableStateOf("") }
     var binLatitude by remember { mutableStateOf(-15.39628) }
     var binLongitude by remember { mutableStateOf(35.33640) }
     var selectedTab by remember { mutableStateOf(0) }
+    var flashMessage by remember { mutableStateOf(FlashMessage(FlashMessageType.INFO, "", false)) }
     val context = LocalContext.current
 
     Dialog(onDismissRequest = { onDismiss() }) {
@@ -414,6 +420,8 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+                FlashMessageComposable(flashMessage = flashMessage)
+
                 Row(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth()
@@ -423,18 +431,56 @@ fun AddBinDialog(onDismiss: () -> Unit, onAddBinSuccess: (Bin) -> Unit) {
                     }
                     Button(onClick = {
                         if (binId.isNotBlank() && binName.isNotBlank()) {
-                            val newBin = Bin(binId, binName, R.drawable.bin_profile, binLatitude, binLongitude)
-                            onAddBinSuccess(newBin)
-                            onDismiss()
-                            Toast.makeText(context, "Bin added successfully", Toast.LENGTH_SHORT).show()
+                            val existingBin = databaseHelper.getBinById(binId) ?: databaseHelper.getBinByName(binName)
+                            if (existingBin != null) {
+                                flashMessage = FlashMessage(FlashMessageType.ERROR, "Bin already exists", true)
+                            } else {
+                                val newBin = Bin(binId, binName, R.drawable.bin_profile, binLatitude, binLongitude)
+                                onAddBinSuccess(newBin)
+                                onDismiss()
+                                flashMessage = FlashMessage(FlashMessageType.SUCCESS, "Bin added successfully", true)
+                            }
                         } else {
-                            Toast.makeText(context, "Please fill all details", Toast.LENGTH_SHORT).show()
+                            flashMessage = FlashMessage(FlashMessageType.WARNING, "Please fill all details", true)
                         }
                     }) {
                         Text("Add Bin")
                     }
                 }
             }
+        }
+    }
+}
+
+data class FlashMessage(val type: FlashMessageType, val message: String, val isVisible: Boolean)
+
+enum class FlashMessageType {
+    SUCCESS, ERROR, WARNING, INFO
+}
+
+@Composable
+fun FlashMessageComposable(flashMessage: FlashMessage) {
+    if (flashMessage.isVisible) {
+        val backgroundColor = when (flashMessage.type) {
+            FlashMessageType.SUCCESS -> Color(0xFFDFF2BF)
+            FlashMessageType.ERROR -> Color(0xFFFFBABA)
+            FlashMessageType.WARNING -> Color(0xFFFFF2B7)
+            FlashMessageType.INFO -> Color(0xFFBDE5F8)
+        }
+        val textColor = when (flashMessage.type) {
+            FlashMessageType.SUCCESS -> Color(0xFF4F8A10)
+            FlashMessageType.ERROR -> Color(0xFFD8000C)
+            FlashMessageType.WARNING -> Color(0xFF9F6000)
+            FlashMessageType.INFO -> Color(0xFF00529B)
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(backgroundColor)
+                .padding(16.dp)
+        ) {
+            Text(text = flashMessage.message, color = textColor)
         }
     }
 }
