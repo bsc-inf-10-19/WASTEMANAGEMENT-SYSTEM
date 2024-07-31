@@ -726,6 +726,7 @@ suspend fun fetchGarbageLevelFromThingSpeak(binId: String): Int {
                 if (feeds.length() > 0) {
                     val lastEntry = feeds.getJSONObject(0)
                     val field1 = lastEntry.optString("field1")
+
                     field1.toIntOrNull() ?: 0
                 } else {
                     0
