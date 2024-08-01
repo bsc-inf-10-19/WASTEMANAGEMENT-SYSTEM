@@ -82,7 +82,7 @@ fun GarbageLevelScreen(progress: Float, garbageLevel: Int) {
 }
 
 private fun DrawScope.drawGauge(progress: Float, color: Color) {
-    val strokeWidth = 20.dp.toPx()
+    val strokeWidth = 30.dp.toPx()
     val size = size.minDimension
     val radius = size / 2
     val startAngle = -90f
@@ -117,7 +117,7 @@ fun DashboardCard(garbageLevel: Int) {
         modifier = Modifier
             .padding(16.dp)
             .fillMaxWidth()
-            .height(300.dp)
+            .height(550.dp)
     ) {
         Column(
             modifier = Modifier
@@ -125,7 +125,7 @@ fun DashboardCard(garbageLevel: Int) {
                 .fillMaxSize()
         ) {
             GarbageLevelScreen(progress = garbageLevel / 100f, garbageLevel = garbageLevel)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             LegendSection()
         }
     }
