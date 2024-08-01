@@ -37,7 +37,7 @@ fun NotificationsScreen(notifications: List<CustomNotification>, navController: 
         Spacer(modifier = Modifier.height(16.dp)) // Add space between the top app bar and the list
 
         LazyColumn(modifier = Modifier.padding(16.dp)) {
-            items(notifications) { notification ->
+            items(notifications.reversed()) { notification ->
                 NotificationItem(notification)
             }
         }
