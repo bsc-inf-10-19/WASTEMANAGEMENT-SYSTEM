@@ -1,27 +1,16 @@
-package com.example.myapplicationwmsystem.Screens
-
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplicationwmsystem.db.DatabaseHelper
@@ -31,6 +20,146 @@ import com.example.myapplicationwmsystem.showNotification
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@Composable
+fun GarbageLevelScreen(progress: Float, garbageLevel: Int) {
+    val progressBarColor = when {
+        garbageLevel > 70 -> Color.Red
+        garbageLevel in 0..45 -> Color.Green
+        else -> Color(0xFFFFA500)
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(350.dp)
+            .border(1.dp, Color.White, RoundedCornerShape(8.dp))
+            .padding(16.dp)
+    ) {
+        Canvas(modifier = Modifier.size(200.dp)) {
+            drawGauge(progress, progressBarColor)
+
+
+            val valueTextSize = 30.sp.toPx()
+            val labelTextSize = 20.sp.toPx()
+
+            val valueTextPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.BLACK
+                textSize = valueTextSize
+                textAlign = android.graphics.Paint.Align.CENTER
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            }
+
+
+            val labelTextPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.BLACK
+                textSize = labelTextSize
+                textAlign = android.graphics.Paint.Align.CENTER
+                typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.NORMAL)
+            }
+
+            val garbageLevelText = "$garbageLevel%"
+            val labelText = "garbage level"
+
+
+            val totalHeight = size.height
+            val valueTextOffset = valueTextSize / 2
+
+            drawContext.canvas.nativeCanvas.drawText(
+                garbageLevelText,
+                size.width / 2,
+                totalHeight / 2 - valueTextOffset,
+                valueTextPaint
+            )
+
+            drawContext.canvas.nativeCanvas.drawText(
+                labelText,
+                size.width / 2,
+                totalHeight / 2 + valueTextOffset + labelTextSize,
+                labelTextPaint
+            )
+        }
+    }
+}
+
+private fun DrawScope.drawGauge(progress: Float, color: Color) {
+    val strokeWidth = 20.dp.toPx()
+    val size = size.minDimension
+    val radius = size / 2
+    val startAngle = -90f
+    val sweepAngle = 360f * progress
+    val backgroundColor = color.copy(alpha = 0.1f)
+
+    drawArc(
+        color = backgroundColor,
+        startAngle = startAngle,
+        sweepAngle = 360f,
+        useCenter = false,
+        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+        style = Stroke(strokeWidth)
+    )
+
+    drawArc(
+        color = color,
+        startAngle = startAngle,
+        sweepAngle = sweepAngle,
+        useCenter = false,
+        size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
+        style = Stroke(strokeWidth)
+    )
+}
+
+@Composable
+fun DashboardCard(garbageLevel: Int) {
+    Card(
+        elevation = CardDefaults.elevatedCardElevation(4.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+            .height(300.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxSize()
+        ) {
+            GarbageLevelScreen(progress = garbageLevel / 100f, garbageLevel = garbageLevel)
+            Spacer(modifier = Modifier.height(16.dp))
+            LegendSection()
+        }
+    }
+}
+
+@Composable
+fun LegendSection() {
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
+    ) {
+        LegendItem(Color.Red, "High Garbage Level")
+        LegendItem(Color(0xFFFFA500), "Moderate Garbage Level")
+        LegendItem(Color.Green, "Low Garbage Level")
+    }
+}
+
+@Composable
+fun LegendItem(color: Color, description: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .padding(vertical = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .background(color, RoundedCornerShape(4.dp))
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = description, style = TextStyle(fontSize = 16.sp))
+    }
+}
 @Composable
 fun GarbageLevelScreen(binId: String) {
     var garbageLevel by remember { mutableStateOf(0) }
@@ -47,7 +176,7 @@ fun GarbageLevelScreen(binId: String) {
 
                     saveGarbageLevelToDatabase(databaseHelper, binId, fetchedGarbageLevel, timestamp)
 
-                    garbageLevel = fetchedGarbageLevel // Update the garbage level state
+                    garbageLevel = fetchedGarbageLevel
 
                     if (fetchedGarbageLevel > 80) {
                         showNotification(context, fetchedGarbageLevel)
@@ -55,45 +184,19 @@ fun GarbageLevelScreen(binId: String) {
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
-                delay(3000) // Fetch every 3 seconds
+                delay(3000)
             }
         }
-    }
-
-
-    val progressBarColor = when {
-        garbageLevel > 70 -> Color.Red
-        garbageLevel in 0..45 -> Color.Green
-        else -> Color(0xFFFFA500)
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = "Garbage Level",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        CircularProgressIndicator(
-            progress = garbageLevel / 100f,
-            modifier = Modifier.size(150.dp),
-            color = progressBarColor,
-            strokeWidth = 12.dp
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "$garbageLevel%",
-            fontSize = 48.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.secondary
-        )
+        DashboardCard(garbageLevel = garbageLevel)
     }
 }
 

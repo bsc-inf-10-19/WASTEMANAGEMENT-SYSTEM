@@ -1,5 +1,6 @@
 package com.example.myapplicationwmsystem.Screens
 
+import GarbageLevelScreen
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Tab
