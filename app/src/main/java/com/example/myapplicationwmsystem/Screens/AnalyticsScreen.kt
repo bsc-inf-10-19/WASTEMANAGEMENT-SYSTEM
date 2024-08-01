@@ -44,7 +44,9 @@ fun AnalyticsScreen(binId: String) {
 
                     // Fetch and filter data based on the selected tab index
                     val filteredEntries = filterDataEntries(databaseHelper, binId, selectedTabIndex)
-                    dataEntries = filteredEntries.mapIndexed { index, entry ->
+                    dataEntries = filteredEntries
+                    .sortedBy { it.timestamp }
+                    .mapIndexed { index, entry ->
                         ChartEntry(
                             index = index.toFloat(),
                             value = entry.garbageLevel.toFloat(),

@@ -311,7 +311,6 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
     }
 
     fun getGarbageLevelsByBinIdAndTimeRange(binId: String, startTime: Long, endTime: Long): List<GarbageLevelEntry> {
-        val garbageLevels = mutableListOf<GarbageLevelEntry>()
         val db = readableDatabase
         val projection = arrayOf(
             GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID,
@@ -320,29 +319,29 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         )
         val selection = "${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID} = ? AND ${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP} BETWEEN ? AND ?"
         val selectionArgs = arrayOf(binId, startTime.toString(), endTime.toString())
-        val cursor: Cursor = db.query(
+        val cursor = db.query(
             GarbageLevelContract.GarbageLevelEntry.TABLE_NAME,
             projection,
             selection,
             selectionArgs,
             null,
             null,
-            null
+            "${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP} ASC" // Ensure ordering here
         )
 
+        val entries = mutableListOf<GarbageLevelEntry>()
         with(cursor) {
             while (moveToNext()) {
                 val binId = getString(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID))
                 val garbageLevel = getInt(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_GARBAGE_LEVEL))
                 val timestamp = getLong(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP))
-
-                garbageLevels.add(GarbageLevelEntry(binId, garbageLevel, timestamp))
+                entries.add(GarbageLevelEntry(binId, garbageLevel, timestamp))
             }
         }
         cursor.close()
         db.close()
-        Log.d("DatabaseHelper", "Retrieved garbage levels: ${garbageLevels.size}")
-        return garbageLevels
+        Log.d("DatabaseHelper", "Retrieved garbage levels: ${entries.size}")
+        return entries
     }
 
     fun deleteBin(id: String): Int {
