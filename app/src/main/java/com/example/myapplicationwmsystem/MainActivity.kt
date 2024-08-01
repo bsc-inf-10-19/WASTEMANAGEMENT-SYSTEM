@@ -78,6 +78,10 @@ import android.view.MotionEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.TabRowDefaults.Divider
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
@@ -216,7 +220,7 @@ fun MyTopAppBar(navController: NavController) {
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color(0xFF1A73E8)
+            containerColor = Color(0xFF33691E)
         )
     )
 }
@@ -231,9 +235,11 @@ fun EditDeleteDropdownMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        offset = DpOffset(x = (-16).dp, y = 0.dp)
+        offset = DpOffset(x = (-16).dp, y = 0.dp),
+        modifier = Modifier.padding(8.dp).width(130.dp)
     ) {
         EditDropdownMenuItem(onEdit)
+        Divider()
         DeleteDropdownMenuItem(onDelete)
     }
 }
@@ -243,6 +249,11 @@ fun EditDropdownMenuItem(onEdit: () -> Unit) {
     DropdownMenuItem(onClick = {
         onEdit()
     }) {
+        Icon(
+            imageVector = Icons.Default.Edit,
+            contentDescription = "Edit",
+            modifier = Modifier.padding(end = 8.dp)
+        )
         Text("Edit")
     }
 }
@@ -252,6 +263,11 @@ fun DeleteDropdownMenuItem(onDelete: () -> Unit) {
     DropdownMenuItem(onClick = {
         onDelete()
     }) {
+        Icon(
+            imageVector = Icons.Default.Delete,
+            contentDescription = "Delete",
+            modifier = Modifier.padding(end = 8.dp)
+        )
         Text("Delete")
     }
 }
@@ -262,7 +278,7 @@ fun DropdownMenuItem(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     content: @Composable RowScope.() -> Unit
 ) {
-    val rippleColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
 
     val modifier = Modifier
         .fillMaxWidth()
@@ -618,15 +634,6 @@ fun EditBinDialog(
 
 
 data class ChartEntry(val index: Float, val value: Float, val timestamp: Long)
-
-
-class TimeAxisFormatter : com.github.mikephil.charting.formatter.ValueFormatter() {
-    private val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-
-    override fun getFormattedValue(value: Float): String {
-        return sdf.format(Date(value.toLong()))
-    }
-}
 
 fun showNotification(context: Context, level: Int) {
     val channelId = "GARBAGE_ALERT_CHANNEL"

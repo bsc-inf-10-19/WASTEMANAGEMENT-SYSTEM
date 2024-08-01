@@ -49,7 +49,7 @@ fun MyTopAppBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color(0xFF1A73E8)
+            containerColor = Color(0xFF33691E)
         )
     )
 }
