@@ -9,7 +9,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
+import com.example.myapplicationwmsystem.db.GarbageLevelEntry
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import com.example.myapplicationwmsystem.R
 import com.example.myapplicationwmsystem.db.Bin
 import com.example.myapplicationwmsystem.db.DatabaseHelper
@@ -25,7 +30,12 @@ fun AddBinScreen(
     var binLongitude by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var thingSpeakLevels by remember { mutableStateOf(Pair(0, 0)) }
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        thingSpeakLevels = fetchGarbageLevelFromThingSpeak()
+    }
 
     fun validateInputs(): Boolean {
         return when {
@@ -55,6 +65,11 @@ fun AddBinScreen(
             try {
                 val latitude = binLatitude.toDouble()
                 val longitude = binLongitude.toDouble()
+                val garbageLevel = when (binName) {
+                    "Bin 1" -> thingSpeakLevels.first
+                    "Bin 2" -> thingSpeakLevels.second
+                    else -> 0
+                }
                 val newBin = Bin(
                     id = binName.hashCode().toString(),
                     name = binName,
@@ -65,6 +80,13 @@ fun AddBinScreen(
                 )
                 val newRowId = databaseHelper.insertBin(newBin)
                 if (newRowId != -1L) {
+                    // Insert initial garbage level entry
+                    val garbageLevelEntry = GarbageLevelEntry(
+                        binId = newBin.id,
+                        garbageLevel = garbageLevel,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    databaseHelper.insertGarbageLevel(garbageLevelEntry)
                     onAddBinSuccess(newBin)
                     Toast.makeText(context, "Bin added successfully", Toast.LENGTH_SHORT).show()
                 } else {
@@ -118,3 +140,29 @@ fun AddBinScreen(
         }
     }
 }
+
+suspend fun fetchGarbageLevelFromThingSpeak(): Pair<Int, Int> {
+    return withContext(Dispatchers.IO) {
+        val apiKey = "H8M68IKI5A3QYVET"
+        val channelId = "2595920"
+        val url = URL("https://api.thingspeak.com/channels/$channelId/feeds.json?api_key=$apiKey&results=1")
+
+        (url.openConnection() as? HttpURLConnection)?.run {
+            requestMethod = "GET"
+            inputStream.bufferedReader().use { reader ->
+                val response = reader.readText()
+                val json = JSONObject(response)
+                val feeds = json.getJSONArray("feeds")
+                if (feeds.length() > 0) {
+                    val lastEntry = feeds.getJSONObject(0)
+                    val field1 = lastEntry.optString("field1").toIntOrNull() ?: 0
+                    val field2 = lastEntry.optString("field2").toIntOrNull() ?: 0
+                    Pair(field1, field2)
+                } else {
+                    Pair(0, 0)
+                }
+            }
+        } ?: Pair(0, 0)
+    }
+}
+

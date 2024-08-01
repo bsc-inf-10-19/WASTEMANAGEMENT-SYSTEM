@@ -157,7 +157,8 @@ fun AppNavigation(databaseHelper: DatabaseHelper) {
     val bins = remember { mutableStateListOf<Bin>() }
     val notifications = remember { mutableStateListOf<CustomNotification>() }
 
-    NotificationsHandler(notifications = notifications, binId = bins.firstOrNull()?.id ?: "")
+    // Remove the binId parameter
+    NotificationsHandler(notifications = notifications, bins = bins, databaseHelper = databaseHelper)
 
     NavHost(navController, startDestination = "splash_screen") {
         composable("splash_screen") {
@@ -674,72 +675,90 @@ data class CustomNotification(
 @Composable
 fun NotificationsHandler(
     notifications: MutableList<CustomNotification>,
-    binId: String
+    bins: List<Bin>,
+    databaseHelper: DatabaseHelper
 ) {
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         while (true) {
-            val level = fetchGarbageLevelFromThingSpeak(binId)
-            if (level >= 30) {
-                val notification = when {
-                    level > 70 -> {
-                        CustomNotification(
-                            id = 4,
-                            title = "Garbage Level Alert",
-                            description = "Garbage level is critically high at $level%. Please take action.",
-                            color = Color(0xFFf8d7da)
-                        )
+            updateBinLevels(bins.toMutableList(), databaseHelper)
+            bins.forEach { bin ->
+                if (bin.garbageLevel >= 30) {
+                    val notification = when {
+                        bin.garbageLevel > 70 -> {
+                            CustomNotification(
+                                id = notifications.size + 1,
+                                title = "Garbage Level Alert for ${bin.name}",
+                                description = "Garbage level is critically high at ${bin.garbageLevel}%. Please take action.",
+                                color = Color(0xFFf8d7da)
+                            )
+                        }
+                        bin.garbageLevel in 30..70 -> {
+                            CustomNotification(
+                                id = notifications.size + 1,
+                                title = "Garbage Level Advisory for ${bin.name}",
+                                description = "Garbage level is at ${bin.garbageLevel}%. Consider taking action soon.",
+                                color = Color(0xFFfff3cd)
+                            )
+                        }
+                        else -> null
                     }
-                    level in 30..70 -> {
-                        CustomNotification(
-                            id = 5,
-                            title = "Garbage Level Advisory",
-                            description = "Garbage level is at $level%. Consider taking action soon.",
-                            color = Color(0xFFfff3cd)
-                        )
-                    }
-                    else -> {
-                        CustomNotification(
-                            id = 6,
-                            title = "Garbage Level Normal",
-                            description = "Garbage level is normal at $level%.",
-                            color = Color(0xFFd4edda)
-                        )
-                    }
-                }
 
-                if (notifications.none { it.description == notification.description }) {
-                    notifications.add(notification)
-                    showNotification(context, level)
+                    notification?.let {
+                        if (notifications.none { n -> n.description == it.description }) {
+                            notifications.add(it)
+                            showNotification(context, bin.garbageLevel)
+                        }
+                    }
                 }
             }
-            delay(3000) // Update every 3 seconds
+            delay(3000) // Check every 3 seconds
         }
     }
 }
 
 suspend fun fetchGarbageLevelFromThingSpeak(binId: String): Int {
     val apiKey = "H8M68IKI5A3QYVET"
-    val channelId = "2595920" // Update this with the respective bin's channel ID
+    val channelId = "2595920"
     val url = URL("https://api.thingspeak.com/channels/$channelId/feeds.json?api_key=$apiKey&results=1")
     return withContext(Dispatchers.IO) {
         (url.openConnection() as? HttpURLConnection)?.run {
             requestMethod = "GET"
             inputStream.bufferedReader().use { reader ->
                 val response = reader.readText()
+                println("Raw ThingSpeak response: $response") // Add this line
                 val json = JSONObject(response)
                 val feeds = json.getJSONArray("feeds")
                 if (feeds.length() > 0) {
                     val lastEntry = feeds.getJSONObject(0)
                     val field1 = lastEntry.optString("field1")
-
-                    field1.toIntOrNull() ?: 0
+                    val field2 = lastEntry.optString("field2")
+                    println("Field1: $field1, Field2: $field2") // Add this line
+                    when (binId) {
+                        "Bin 1" -> field1.toIntOrNull() ?: 0
+                        "Bin 2" -> field2.toIntOrNull() ?: 0
+                        else -> 0
+                    }
                 } else {
                     0
                 }
             }
         } ?: 0
+    }
+}
+
+suspend fun updateBinLevels(bins: MutableList<Bin>, databaseHelper: DatabaseHelper) {
+    val level1 = fetchGarbageLevelFromThingSpeak("Bin 1")
+    val level2 = fetchGarbageLevelFromThingSpeak("Bin 2")
+    bins.find { it.id == "Bin 2" }?.let { bin ->
+        bin.garbageLevel = level2
+        databaseHelper.updateBin(bin)
+    }
+
+    bins.find { it.id == "Bin 1" }?.let { bin ->
+        bin.garbageLevel = level1
+        databaseHelper.updateBin(bin)
     }
 }
 
