@@ -172,6 +172,7 @@ fun HomeScreen(
 
             showEditDialog?.let { bin ->
                 EditBinDialog(
+                    databaseHelper = databaseHelper,
                     bin = bin,
                     onDismiss = { showEditDialog = null },
                     onEditBinSuccess = { updatedBin ->

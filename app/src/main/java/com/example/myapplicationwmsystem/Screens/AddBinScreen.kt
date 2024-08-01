@@ -71,7 +71,7 @@ fun AddBinScreen(
                     else -> 0
                 }
                 val newBin = Bin(
-                    id = binName.hashCode().toString(),
+                    id = binName.hashCode().toString(), // Generate ID based on binName
                     name = binName,
                     imageRes = R.drawable.bin_profile,
                     latitude = latitude,

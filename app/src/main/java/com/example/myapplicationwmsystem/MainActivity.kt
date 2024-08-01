@@ -15,7 +15,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -71,9 +70,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import android.view.MotionEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -97,6 +93,7 @@ import org.osmdroid.views.overlay.Marker
 import com.example.myapplicationwmsystem.Screens.NotificationsScreen
 import com.example.myapplicationwmsystem.db.Bin
 import com.example.myapplicationwmsystem.db.DatabaseHelper
+import java.util.UUID
 
 class MainActivity : ComponentActivity() {
 
@@ -237,7 +234,7 @@ fun EditDeleteDropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
         offset = DpOffset(x = (-16).dp, y = 0.dp),
-        modifier = Modifier.padding(8.dp).width(130.dp)
+        modifier = Modifier.padding(8.dp).width(150.dp)
     ) {
         EditDropdownMenuItem(onEdit)
         Divider()
@@ -253,9 +250,11 @@ fun EditDropdownMenuItem(onEdit: () -> Unit) {
         Icon(
             imageVector = Icons.Default.Edit,
             contentDescription = "Edit",
-            modifier = Modifier.padding(end = 8.dp)
+            modifier = Modifier.padding(end = 8.dp),
         )
-        Text("Edit")
+        Text(
+            "Edit"
+        )
     }
 }
 
@@ -266,10 +265,10 @@ fun DeleteDropdownMenuItem(onDelete: () -> Unit) {
     }) {
         Icon(
             imageVector = Icons.Default.Delete,
-            contentDescription = "Delete",
-            modifier = Modifier.padding(end = 8.dp)
+            contentDescription = "Deactivate",
+            modifier = Modifier.padding(end = 8.dp),
         )
-        Text("Delete")
+        Text("Deactivate")
     }
 }
 
@@ -309,13 +308,13 @@ fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> U
                     .padding(16.dp)
             ) {
                 Text(
-                    text = "Delete Bin",
+                    text = "Deactivate Bin",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
-                    text = "Are you sure you want to delete ${bin.name}?",
+                    text = "Are you sure you want to deactivate ${bin.name}?",
                     fontSize = 16.sp
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -329,7 +328,7 @@ fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> U
                     Button(onClick = {
                         onDeleteBinSuccess()
                     }) {
-                        Text("Delete")
+                        Text("Deactivate")
                     }
                 }
             }
@@ -344,13 +343,18 @@ fun AddBinDialog(
     onAddBinSuccess: (Bin) -> Unit,
     databaseHelper: DatabaseHelper
 ) {
-    var binId by remember { mutableStateOf("") }
     var binName by remember { mutableStateOf("") }
     var binLatitude by remember { mutableStateOf(-15.39628) }
     var binLongitude by remember { mutableStateOf(35.33640) }
     var selectedTab by remember { mutableStateOf(0) }
     var flashMessage by remember { mutableStateOf(FlashMessage(FlashMessageType.INFO, "", false)) }
     val context = LocalContext.current
+
+    // Function to generate a unique bin ID
+    fun generateUniqueBinId(): String {
+        val binCount = databaseHelper.getAllBins().size // Get current bin count
+        return "Bin ${binCount + 1}" // Increment count for new ID
+    }
 
     Dialog(onDismissRequest = { onDismiss() }) {
         Surface(
@@ -385,13 +389,6 @@ fun AddBinDialog(
                 when (selectedTab) {
                     0 -> {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
-                            OutlinedTextField(
-                                value = binId,
-                                onValueChange = { binId = it },
-                                label = { Text("Bin ID") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = binName,
                                 onValueChange = { binName = it },
@@ -447,7 +444,8 @@ fun AddBinDialog(
                         Text("Cancel")
                     }
                     Button(onClick = {
-                        if (binId.isNotBlank() && binName.isNotBlank()) {
+                        if (binName.isNotBlank()) {
+                            val binId = generateUniqueBinId() // Generate new bin ID
                             val existingBin = databaseHelper.getBinById(binId) ?: databaseHelper.getBinByName(binName)
                             if (existingBin != null) {
                                 flashMessage = FlashMessage(FlashMessageType.ERROR, "Bin already exists", true)
@@ -507,13 +505,14 @@ fun FlashMessageComposable(flashMessage: FlashMessage) {
 fun EditBinDialog(
     bin: Bin,
     onDismiss: () -> Unit,
-    onEditBinSuccess: (Bin) -> Unit
+    onEditBinSuccess: (Bin) -> Unit,
+    databaseHelper: DatabaseHelper
 ) {
-    var binId by remember { mutableStateOf(bin.id) }
     var binName by remember { mutableStateOf(bin.name) }
     var binLatitude by remember { mutableStateOf(bin.latitude) }
     var binLongitude by remember { mutableStateOf(bin.longitude) }
     var selectedTab by remember { mutableStateOf(0) }
+    var flashMessage by remember { mutableStateOf(FlashMessage(FlashMessageType.INFO, "", false)) }
     val context = LocalContext.current
 
     Dialog(onDismissRequest = { onDismiss() }) {
@@ -550,8 +549,8 @@ fun EditBinDialog(
                     0 -> {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
                             OutlinedTextField(
-                                value = binId,
-                                onValueChange = { binId = it },
+                                value = bin.id, // ID is read-only
+                                onValueChange = { /* Do nothing */ },
                                 label = { Text("Bin ID") },
                                 readOnly = true,
                                 modifier = Modifier.fillMaxWidth()
@@ -602,6 +601,8 @@ fun EditBinDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+                FlashMessageComposable(flashMessage = flashMessage)
+
                 Row(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth()
@@ -611,16 +612,23 @@ fun EditBinDialog(
                     }
                     Button(onClick = {
                         if (binName.isNotBlank()) {
-                            val updatedBin = bin.copy(
-                                name = binName,
-                                latitude = binLatitude,
-                                longitude = binLongitude
-                            )
-                            onEditBinSuccess(updatedBin)
-                            onDismiss()
-                            Toast.makeText(context, "Bin updated successfully", Toast.LENGTH_SHORT).show()
+                            val allBins = databaseHelper.getAllBins()
+                            val isNameDuplicate = allBins.any { it.name.equals(binName, ignoreCase = true) && it.id != bin.id }
+
+                            if (isNameDuplicate) {
+                                flashMessage = FlashMessage(FlashMessageType.ERROR, "Bin name already exists", true)
+                            } else {
+                                val updatedBin = bin.copy(
+                                    name = binName,
+                                    latitude = binLatitude,
+                                    longitude = binLongitude
+                                )
+                                onEditBinSuccess(updatedBin)
+                                onDismiss()
+                                flashMessage = FlashMessage(FlashMessageType.SUCCESS, "Bin updated successfully", true)
+                            }
                         } else {
-                            Toast.makeText(context, "Please fill all details", Toast.LENGTH_SHORT).show()
+                            flashMessage = FlashMessage(FlashMessageType.WARNING, "Please fill all details", true)
                         }
                     }) {
                         Text("Save Changes")
