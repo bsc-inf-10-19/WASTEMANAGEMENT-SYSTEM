@@ -310,6 +310,41 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         return entries
     }
 
+    fun getGarbageLevelsByBinIdAndTimeRange(binId: String, startTime: Long, endTime: Long): List<GarbageLevelEntry> {
+        val garbageLevels = mutableListOf<GarbageLevelEntry>()
+        val db = readableDatabase
+        val projection = arrayOf(
+            GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID,
+            GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_GARBAGE_LEVEL,
+            GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP
+        )
+        val selection = "${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID} = ? AND ${GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP} BETWEEN ? AND ?"
+        val selectionArgs = arrayOf(binId, startTime.toString(), endTime.toString())
+        val cursor: Cursor = db.query(
+            GarbageLevelContract.GarbageLevelEntry.TABLE_NAME,
+            projection,
+            selection,
+            selectionArgs,
+            null,
+            null,
+            null
+        )
+
+        with(cursor) {
+            while (moveToNext()) {
+                val binId = getString(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_BIN_ID))
+                val garbageLevel = getInt(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_GARBAGE_LEVEL))
+                val timestamp = getLong(getColumnIndexOrThrow(GarbageLevelContract.GarbageLevelEntry.COLUMN_NAME_TIMESTAMP))
+
+                garbageLevels.add(GarbageLevelEntry(binId, garbageLevel, timestamp))
+            }
+        }
+        cursor.close()
+        db.close()
+        Log.d("DatabaseHelper", "Retrieved garbage levels: ${garbageLevels.size}")
+        return garbageLevels
+    }
+
     fun deleteBin(id: String): Int {
         val db = writableDatabase
         val selection = "${BinContract.BinEntry.COLUMN_NAME_ID} = ?"
@@ -340,4 +375,5 @@ class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         Log.d("DatabaseHelper", "Updated bin with id: ${bin.id}, rows affected: $updatedRows")
         return updatedRows
     }
+
 }

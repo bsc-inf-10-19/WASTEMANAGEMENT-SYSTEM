@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
+import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -12,8 +13,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.Tab
-import androidx.compose.material.TabRow
-import androidx.compose.material.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +43,7 @@ fun AnalyticsScreen(binId: String) {
                     saveGarbageLevelToDatabase(databaseHelper, binId, garbageLevel, timestamp)
 
                     // Fetch and filter data based on the selected tab index
-                    val filteredEntries = fetchGarbageLevelsFromDatabase(databaseHelper, binId, selectedTabIndex)
+                    val filteredEntries = filterDataEntries(databaseHelper, binId, selectedTabIndex)
                     dataEntries = filteredEntries.mapIndexed { index, entry ->
                         ChartEntry(
                             index = index.toFloat(),
@@ -57,18 +56,6 @@ fun AnalyticsScreen(binId: String) {
                 }
                 delay(10000) // Fetch every 10 seconds
             }
-        }
-    }
-
-    fun filterDataEntries() {
-        val currentTime = System.currentTimeMillis()
-        dataEntries = when (selectedTabIndex) {
-            0 -> dataEntries.filter { it.timestamp >= currentTime - 1.dayInMillis }
-            1 -> dataEntries.filter { it.timestamp >= currentTime - 1.weekInMillis }
-            2 -> dataEntries.filter { it.timestamp >= currentTime - 1.monthInMillis }
-            3 -> dataEntries.filter { it.timestamp >= currentTime - 1.yearInMillis }
-            4 -> dataEntries // All time
-            else -> emptyList()
         }
     }
 
@@ -102,13 +89,20 @@ fun AnalyticsScreen(binId: String) {
             },
             divider = {}
         ) {
-            val tabTitles = listOf("Day", "Week", "Month", "Year", "All Time")
+            val tabTitles = listOf("Day", "Week", "Month", "Year")
             tabTitles.forEachIndexed { index, title ->
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = {
                         selectedTabIndex = index
-                        filterDataEntries() // Filter data when tab is selected
+                        val filteredEntries = filterDataEntries(databaseHelper, binId, selectedTabIndex)
+                        dataEntries = filteredEntries.mapIndexed { index, entry ->
+                            ChartEntry(
+                                index = index.toFloat(),
+                                value = entry.garbageLevel.toFloat(),
+                                timestamp = entry.timestamp
+                            )
+                        }
                     },
                     modifier = Modifier
                         .padding(4.dp)
@@ -139,33 +133,34 @@ fun AnalyticsScreen(binId: String) {
     }
 }
 
-
-val Int.dayInMillis: Long
-    get() = this * 24L * 60 * 60 * 1000
-
-val Int.weekInMillis: Long
-    get() = this * 7 * 24L * 60 * 60 * 1000
-
-val Int.monthInMillis: Long
-    get() = this * 30 * 24L * 60 * 60 * 1000
-
-val Int.yearInMillis: Long
-    get() = this * 365L * 24 * 60 * 60 * 1000
-
 private fun saveGarbageLevelToDatabase(databaseHelper: DatabaseHelper, binId: String, garbageLevel: Int, timestamp: Long) {
     val entry = GarbageLevelEntry(binId, garbageLevel, timestamp)
     databaseHelper.insertGarbageLevel(entry)
 }
 
-private fun fetchGarbageLevelsFromDatabase(databaseHelper: DatabaseHelper, binId: String, selectedTabIndex: Int): List<GarbageLevelEntry> {
+fun filterDataEntries(
+    databaseHelper: DatabaseHelper,
+    binId: String,
+    tabIndex: Int
+): List<GarbageLevelEntry> {
     val currentTime = System.currentTimeMillis()
-    val allEntries = databaseHelper.getGarbageLevelsByBinId(binId)
-    return when (selectedTabIndex) {
-        0 -> allEntries.filter { it.timestamp >= currentTime - 1.dayInMillis }
-        1 -> allEntries.filter { it.timestamp >= currentTime - 1.weekInMillis }
-        2 -> allEntries.filter { it.timestamp >= currentTime - 1.monthInMillis }
-        3 -> allEntries.filter { it.timestamp >= currentTime - 1.yearInMillis }
-        4 -> allEntries
+    return when (tabIndex) {
+        0 -> databaseHelper.getGarbageLevelsByBinIdAndTimeRange(binId, currentTime - 1.dayInMillis, currentTime)
+        1 -> databaseHelper.getGarbageLevelsByBinIdAndTimeRange(binId, currentTime - 1.weekInMillis, currentTime)
+        2 -> databaseHelper.getGarbageLevelsByBinIdAndTimeRange(binId, currentTime - 1.monthInMillis, currentTime)
+        3 -> databaseHelper.getGarbageLevelsByBinIdAndTimeRange(binId, currentTime - 1.yearInMillis, currentTime)
         else -> emptyList()
     }
 }
+
+private val Int.dayInMillis: Long
+    get() = this * 24L * 60 * 60 * 1000
+
+private val Int.weekInMillis: Long
+    get() = this * 7 * 24L * 60 * 60 * 1000
+
+private val Int.monthInMillis: Long
+    get() = this * 30 * 24L * 60 * 60 * 1000
+
+private val Int.yearInMillis: Long
+    get() = this * 365L * 24 * 60 * 60 * 1000

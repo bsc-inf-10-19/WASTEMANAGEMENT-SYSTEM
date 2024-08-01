@@ -22,9 +22,23 @@ import com.github.mikephil.charting.formatter.ValueFormatter
 import java.text.SimpleDateFormat
 import java.util.*
 
+
 @Composable
 fun LineChartView(entries: List<ChartEntry>) {
     val context = LocalContext.current
+
+    // Calculate the time range
+    val minTimestamp = entries.minOfOrNull { it.timestamp } ?: 0L
+    val maxTimestamp = entries.maxOfOrNull { it.timestamp } ?: 0L
+    val range = maxTimestamp - minTimestamp
+
+    // Determine the format based on the time range
+    val dateFormat = when {
+        range < 24 * 60 * 60 * 1000L -> SimpleDateFormat("HH:mm", Locale.getDefault()) // less than 24 hours
+        range < 7 * 24 * 60 * 60 * 1000L -> SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) // less than a week
+        range < 30 * 24 * 60 * 60 * 1000L -> SimpleDateFormat("MM-dd", Locale.getDefault()) // less than a month
+        else -> SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) // longer than a month
+    }
 
     Card(
         modifier = Modifier
@@ -70,15 +84,9 @@ fun LineChartView(entries: List<ChartEntry>) {
                         textColor = Color.Black.toArgb()
                         gridColor = Color.LightGray.toArgb()
                         gridLineWidth = 0.5f
-                        textColor = Color.Black.toArgb()
                         valueFormatter = object : ValueFormatter() {
                             override fun getFormattedValue(value: Float): String {
-                                val chartEntry = entries.find { it.index.toInt() == value.toInt() }
-                                return if (chartEntry != null) {
-                                    SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(chartEntry.timestamp))
-                                } else {
-                                    value.toString()
-                                }
+                                return dateFormat.format(Date(value.toLong()))
                             }
                         }
                     }
@@ -104,7 +112,7 @@ fun LineChartView(entries: List<ChartEntry>) {
             },
             update = { chart ->
                 if (entries.isNotEmpty()) {
-                    val lineEntries = entries.map { Entry(it.index.toFloat(), it.value) }
+                    val lineEntries = entries.map { Entry(it.timestamp.toFloat(), it.value) }
                     val lineDataSet = LineDataSet(lineEntries, "Garbage Level").apply {
                         setDrawValues(false)
                         setDrawCircles(true)
