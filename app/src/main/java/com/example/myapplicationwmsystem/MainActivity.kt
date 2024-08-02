@@ -89,6 +89,7 @@ import com.mapbox.maps.CameraOptions
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
@@ -176,7 +177,10 @@ fun AppNavigation(databaseHelper: DatabaseHelper) {
             LoginScreen(onLoginSuccess = { navController.navigate("home_screen") }, onSignUp = { navController.navigate("sign_up_screen") })
         }
         composable("sign_up_screen") {
-            SignUpScreen(onSignUpSuccess = { navController.navigate("login_screen") })
+            SignUpScreen(
+                onSignUpSuccess = { navController.navigate("login_screen") },
+                onLogin = { navController.navigate("login_screen") }
+            )
         }
         composable("home_screen") {
             HomeScreen(navController, bins, databaseHelper)
@@ -213,7 +217,7 @@ fun MyTopAppBar(navController: NavController) {
     TopAppBar(
         title = {
             Text(
-                text = "Waste Management",
+                text = "Smart Waste Manager",
                 color = Color.White
             )
         },
@@ -368,8 +372,8 @@ fun AddBinDialog(
 
     // Function to generate a unique bin ID
     fun generateUniqueBinId(): String {
-        val binCount = databaseHelper.getAllBins().size // Get current bin count
-        return "Bin ${binCount + 1}" // Increment count for new ID
+        val binCount = databaseHelper.getAllBins().size
+        return "Bin ${binCount + 1}"
     }
 
     Dialog(onDismissRequest = { onDismiss() }) {
@@ -424,7 +428,13 @@ fun AddBinDialog(
                                 value = binName,
                                 onValueChange = { binName = it },
                                 label = { Text("Bin Name") },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = TextFieldDefaults.colors(
+                                    focusedIndicatorColor = Color(0xFF33691E),
+                                    focusedLabelColor = Color(0xFF33691E),
+                                    cursorColor = Color(0xFF33691E)
+                                ),
+                                isError = binName.isEmpty()
                             )
                         }
                     }
@@ -606,7 +616,13 @@ fun EditBinDialog(
                                 value = binName,
                                 onValueChange = { binName = it },
                                 label = { Text("Bin Name") },
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = TextFieldDefaults.colors(
+                                    focusedIndicatorColor = Color(0xFF33691E),
+                                    focusedLabelColor = Color(0xFF33691E),
+                                    cursorColor = Color(0xFF33691E)
+                                ),
+                                isError = binName.isEmpty()
                             )
                         }
                     }
