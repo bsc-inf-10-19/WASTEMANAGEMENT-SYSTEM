@@ -14,7 +14,9 @@ data class Bin(
     val imageRes: Int,
     val latitude: Double,
     val longitude: Double,
-    var garbageLevel: Int = 0
+    var garbageLevel: Int = 0,
+    val isFull: Boolean = garbageLevel >= 80
+
 )
 
 data class GarbageLevelEntry(

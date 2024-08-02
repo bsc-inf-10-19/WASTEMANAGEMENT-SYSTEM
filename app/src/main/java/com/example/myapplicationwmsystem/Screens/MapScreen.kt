@@ -1,3 +1,4 @@
+
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -37,7 +38,6 @@ import com.example.myapplicationwmsystem.Components.MapboxAccessToken
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-
 @Composable
 fun MapScreen(bins: List<Bin>) {
     val context = LocalContext.current
@@ -46,8 +46,9 @@ fun MapScreen(bins: List<Bin>) {
     val zombaLongitude = 35.3333
     val truckLatitude = -15.384507010964562
     val truckLongitude = 35.31856127816891
-    val selectedBinName = remember { mutableStateOf<String?>(null) }
-    val distanceInfo = remember { mutableStateOf<String?>(null) }
+    val dumpsiteLatitude = -15.391829825651095
+    val dumpsiteLongitude = 35.34502701372606 // Replace with actual dumpsite longitude
+    val dumpsiteLocation = Point.fromLngLat(dumpsiteLongitude, dumpsiteLatitude)
     val predefinedLocation = Point.fromLngLat(truckLongitude, truckLatitude)
     val initialZoom = 14.0
     val mapStyles = listOf(
@@ -61,17 +62,32 @@ fun MapScreen(bins: List<Bin>) {
     val currentStyleIndex = remember { mutableStateOf(0) }
     val selectedBin = remember { mutableStateOf<Bin?>(null) }
     val routeCoordinates = remember { mutableStateOf<List<Point>?>(null) }
+    val selectedBinName = remember { mutableStateOf<String?>(null) }
+    val distanceInfo = remember { mutableStateOf<String?>(null) }
 
-    // Create bitmaps for bin and truck icons
+    // Create bitmaps for bin, truck, and dumpsite icons
     val binIconBitmap = remember {
         val drawable = ContextCompat.getDrawable(context, R.drawable.bin_profile)
         val bitmap = (drawable as BitmapDrawable).bitmap
         Bitmap.createScaledBitmap(bitmap, 50, 50, true)
     }
+
+    val redBinIconBitmap = remember {
+        val drawable = ContextCompat.getDrawable(context, R.drawable.binfull)
+        val bitmap = (drawable as BitmapDrawable).bitmap
+        Bitmap.createScaledBitmap(bitmap, 70, 70, true)
+    }
+
     val truckIconBitmap = remember {
         val drawable = ContextCompat.getDrawable(context, R.drawable.garbage_truck)
         val bitmap = (drawable as BitmapDrawable).bitmap
         Bitmap.createScaledBitmap(bitmap, 70, 70, true)
+    }
+
+    val dumpsiteIconBitmap = remember {
+        val drawable = ContextCompat.getDrawable(context, R.drawable.dumpsite_icon) // Replace with actual dumpsite icon
+        val bitmap = (drawable as BitmapDrawable).bitmap
+        Bitmap.createScaledBitmap(bitmap, 60, 60, true)
     }
 
     AndroidView(
@@ -90,10 +106,12 @@ fun MapScreen(bins: List<Bin>) {
 
                 // Add bin markers
                 bins.forEach { bin ->
-                    addBinMarker(pointAnnotationManager, bin, binIconBitmap)
+                    addBinMarker(pointAnnotationManager, bin, binIconBitmap, redBinIconBitmap)
                 }
                 // Add truck marker for predefined location
                 addTruckMarker(pointAnnotationManager, predefinedLocation, truckIconBitmap)
+                // Add dumpsite marker
+                addDumpsiteMarker(pointAnnotationManager, dumpsiteLocation, dumpsiteIconBitmap)
 
                 mapboxMap.addOnMapClickListener { point ->
                     val clickedBin = bins.minByOrNull { bin ->
@@ -203,7 +221,8 @@ fun MapScreen(bins: List<Bin>) {
                 binToRoute?.let { bin ->
                     calculateRoute(
                         predefinedLocation,
-                        Point.fromLngLat(bin.longitude, bin.latitude)
+                        Point.fromLngLat(bin.longitude, bin.latitude),
+                        dumpsiteLocation
                     ) { coordinates ->
                         routeCoordinates.value = coordinates
                         mapViewState.value?.let { mapView ->
@@ -223,7 +242,8 @@ fun MapScreen(bins: List<Bin>) {
     }
 }
 
-private fun addBinMarker(manager: PointAnnotationManager, bin: Bin, icon: Bitmap) {
+private fun addBinMarker(manager: PointAnnotationManager, bin: Bin, greenIcon: Bitmap, redIcon: Bitmap) {
+    val icon = if (bin.garbageLevel > 80) redIcon else greenIcon
     val pointAnnotationOptions = PointAnnotationOptions()
         .withPoint(Point.fromLngLat(bin.longitude, bin.latitude))
         .withTextField(bin.name)
@@ -237,16 +257,31 @@ private fun addBinMarker(manager: PointAnnotationManager, bin: Bin, icon: Bitmap
 private fun addTruckMarker(manager: PointAnnotationManager, location: Point, icon: Bitmap) {
     val pointAnnotationOptions = PointAnnotationOptions()
         .withPoint(location)
-        .withTextField("Zomba City Council")
         .withIconImage(icon)
         .withIconSize(1.0)
         .withIconOffset(listOf(0.0, -30.0))
 
     manager.create(pointAnnotationOptions)
-}private fun calculateRoute(start: Point, end: Point, onRouteReady: (List<Point>) -> Unit) {
+}
+private fun addDumpsiteMarker(manager: PointAnnotationManager, location: Point, icon: Bitmap) {
+    val pointAnnotationOptions = PointAnnotationOptions()
+        .withPoint(location)
+        .withIconImage(icon)
+        .withIconSize(1.0)
+        .withIconOffset(listOf(0.0, -30.0))
+
+    manager.create(pointAnnotationOptions)
+}
+private fun calculateRoute(
+    start: Point,
+    intermediate: Point,
+    end: Point,
+    onRouteReady: (List<Point>) -> Unit
+) {
     val client = MapboxDirections.builder()
         .origin(start)
-        .destination(end)
+        .addWaypoint(intermediate) // Add intermediate waypoint (bin)
+        .destination(end) // End point (dumpsite)
         .overview(DirectionsCriteria.OVERVIEW_FULL)
         .profile(DirectionsCriteria.PROFILE_DRIVING)
         .steps(true)
@@ -273,24 +308,21 @@ private fun addTruckMarker(manager: PointAnnotationManager, location: Point, ico
             // Handle network errors
         }
     })
-}private fun displayRoute(mapView: MapView, coordinates: List<Point>) {
+}
+private fun displayRoute(mapView: MapView, coordinates: List<Point>) {
     mapView.getMapboxMap().getStyle { style ->
-        // Remove existing route annotations
         mapView.annotations.cleanup()
 
         val polylineAnnotationManager = mapView.annotations.createPolylineAnnotationManager()
 
-        // Create outline for the route
         val outlineOptions = PolylineAnnotationOptions()
             .withPoints(coordinates)
             .withLineColor("#000000") // Black outline
             .withLineWidth(8.0)
         polylineAnnotationManager.create(outlineOptions)
 
-        // Animate the route drawing
         animateRouteDraw(mapView, coordinates)
 
-        // Adjust camera to show the entire route
         val cameraPosition = mapView.getMapboxMap().cameraForCoordinates(
             coordinates,
             EdgeInsets(100.0, 100.0, 100.0, 100.0),

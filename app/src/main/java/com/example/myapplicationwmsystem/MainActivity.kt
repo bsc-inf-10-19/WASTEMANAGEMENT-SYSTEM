@@ -8,7 +8,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.Toast
+import com.mapbox.geojson.Point
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -33,6 +33,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import com.mapbox.maps.Style
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.PointAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import com.mapbox.maps.plugin.gestures.addOnMapClickListener
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -79,6 +84,7 @@ import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Tab
+import com.mapbox.maps.CameraOptions
 import androidx.compose.material3.TabRow
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.viewinterop.AndroidView
@@ -89,6 +95,7 @@ import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
+
 import org.osmdroid.views.overlay.Marker
 import com.example.myapplicationwmsystem.Screens.NotificationsScreen
 import com.example.myapplicationwmsystem.db.Bin
@@ -158,6 +165,7 @@ fun AppNavigation(databaseHelper: DatabaseHelper) {
     NotificationsHandler(notifications = notifications, bins = bins, databaseHelper = databaseHelper)
 
     NavHost(navController, startDestination = "splash_screen") {
+
         composable("splash_screen") {
             SplashScreen(onTimeout = { navController.navigate("login_screen") })
         }

@@ -29,6 +29,8 @@ fun SearchScreen(
     var showEditDialog by remember { mutableStateOf<Bin?>(null) }
     var binToDelete by remember { mutableStateOf<Bin?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+
+    // Filter bins based on the search query
     val filteredBins = bins.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -52,7 +54,7 @@ fun SearchScreen(
                 .padding(16.dp)
         )
         LazyColumn {
-            items(bins) { bin ->
+            items(filteredBins) { bin ->  // Use filteredBins here
                 HomeScreenItem(
                     imageRes = bin.imageRes,
                     binId = bin.id,

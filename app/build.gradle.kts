@@ -56,6 +56,7 @@ val freeDebugImplementation by configurations.creating
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.material3)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation( "androidx.compose.ui:ui:1.6.8")
@@ -63,7 +64,7 @@ dependencies {
     freeDebugImplementation("com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.42.6")
     freeDebugImplementation("com.mapbox.mapboxsdk:mapbox-android-services:4.7.0")
     freeDebugImplementation ("com.mapbox.navigation:ui-dropin:2.10.0")
-
+    freeDebugImplementation(" 'com.mapbox.mapboxsdk:mapbox-sdk-services:7.0.0'")
     implementation ("com.mapbox.mapboxsdk:mapbox-sdk-services:5.8.0")
     implementation ("com.mapbox.mapboxsdk:mapbox-sdk-turf:5.8.0")
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")
@@ -72,8 +73,6 @@ dependencies {
     implementation ("androidx.compose.ui:ui-tooling-preview:1.4.3")
     implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
     implementation ("androidx.activity:activity-compose:1.7.2")
-    implementation(libs.material3)
-    freeDebugImplementation(" 'com.mapbox.mapboxsdk:mapbox-sdk-services:7.0.0'")
     implementation("com.mapbox.mapboxsdk:mapbox-sdk-turf:6.8.0")
     implementation("com.mapbox.maps:android:11.5.1")
     implementation("androidx.room:room-runtime:2.3.0")
