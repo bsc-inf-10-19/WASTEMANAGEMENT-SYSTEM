@@ -83,9 +83,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Tab
 import com.mapbox.maps.CameraOptions
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavController
@@ -330,13 +333,18 @@ fun DeleteBinDialog(bin: Bin, onDismiss: () -> Unit, onDeleteBinSuccess: () -> U
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    TextButton(onClick = { onDismiss() }) {
+                    TextButton(
+                        onClick = { onDismiss() },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                    ) {
                         Text("Cancel")
                     }
-                    Button(onClick = {
-                        onDeleteBinSuccess()
-                    }) {
-                        Text("Deactivate")
+
+                    Button(
+                        onClick = { onDeleteBinSuccess() },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                    ) {
+                        Text("Deactivate", color = Color.White)
                     }
                 }
             }
@@ -381,17 +389,32 @@ fun AddBinDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                TabRow(selectedTabIndex = selectedTab) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("Details") }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("Location") }
-                    )
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.Indicator(
+                            Modifier
+                                .tabIndicatorOffset(tabPositions[selectedTab])
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            color = Color(0xFF33691E)
+                        )
+                    }
+                ) {
+                    val tabTitles = listOf("Details", "Location")
+
+                    tabTitles.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    text = title,
+                                    color = if (selectedTab == index) Color.Black else Color.Gray
+                                )
+                            }
+                        )
+                    }
                 }
 
                 when (selectedTab) {
@@ -448,28 +471,36 @@ fun AddBinDialog(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    TextButton(onClick = { onDismiss() }) {
+                    TextButton(
+                        onClick = { onDismiss() },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                    ) {
                         Text("Cancel")
                     }
-                    Button(onClick = {
-                        if (binName.isNotBlank()) {
-                            val binId = generateUniqueBinId() // Generate new bin ID
-                            val existingBin = databaseHelper.getBinById(binId) ?: databaseHelper.getBinByName(binName)
-                            if (existingBin != null) {
-                                flashMessage = FlashMessage(FlashMessageType.ERROR, "Bin already exists", true)
+
+                    Button(
+                        onClick = {
+                            if (binName.isNotBlank()) {
+                                val binId = generateUniqueBinId()
+                                val existingBin = databaseHelper.getBinById(binId) ?: databaseHelper.getBinByName(binName)
+                                if (existingBin != null) {
+                                    flashMessage = FlashMessage(FlashMessageType.ERROR, "Bin already exists", true)
+                                } else {
+                                    val newBin = Bin(binId, binName, R.drawable.bin_profile, binLatitude, binLongitude)
+                                    onAddBinSuccess(newBin)
+                                    onDismiss()
+                                    flashMessage = FlashMessage(FlashMessageType.SUCCESS, "Bin added successfully", true)
+                                }
                             } else {
-                                val newBin = Bin(binId, binName, R.drawable.bin_profile, binLatitude, binLongitude)
-                                onAddBinSuccess(newBin)
-                                onDismiss()
-                                flashMessage = FlashMessage(FlashMessageType.SUCCESS, "Bin added successfully", true)
+                                flashMessage = FlashMessage(FlashMessageType.WARNING, "Please fill all details", true)
                             }
-                        } else {
-                            flashMessage = FlashMessage(FlashMessageType.WARNING, "Please fill all details", true)
-                        }
-                    }) {
-                        Text("Add Bin")
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF33691E))
+                    ) {
+                        Text("Add Bin", color = Color.White)
                     }
                 }
+
             }
         }
     }
@@ -540,30 +571,37 @@ fun EditBinDialog(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                TabRow(selectedTabIndex = selectedTab) {
-                    Tab(
-                        selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
-                        text = { Text("Details") }
-                    )
-                    Tab(
-                        selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
-                        text = { Text("Location") }
-                    )
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.Indicator(
+                            Modifier
+                                .tabIndicatorOffset(tabPositions[selectedTab])
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            color = Color(0xFF33691E)
+                        )
+                    }
+                ) {
+                    val tabTitles = listOf("Details", "Location")
+
+                    tabTitles.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { selectedTab = index },
+                            text = {
+                                Text(
+                                    text = title,
+                                    color = if (selectedTab == index) Color.Black else Color.Gray
+                                )
+                            }
+                        )
+                    }
                 }
 
                 when (selectedTab) {
                     0 -> {
                         Column(modifier = Modifier.padding(top = 16.dp)) {
-                            OutlinedTextField(
-                                value = bin.id, // ID is read-only
-                                onValueChange = { /* Do nothing */ },
-                                label = { Text("Bin ID") },
-                                readOnly = true,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
                             OutlinedTextField(
                                 value = binName,
                                 onValueChange = { binName = it },
@@ -615,40 +653,45 @@ fun EditBinDialog(
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    TextButton(onClick = { onDismiss() }) {
+                    TextButton(
+                        onClick = { onDismiss() },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+                    ) {
                         Text("Cancel")
                     }
-                    Button(onClick = {
-                        if (binName.isNotBlank()) {
-                            val allBins = databaseHelper.getAllBins()
-                            val isNameDuplicate = allBins.any { it.name.equals(binName, ignoreCase = true) && it.id != bin.id }
 
-                            if (isNameDuplicate) {
-                                flashMessage = FlashMessage(FlashMessageType.ERROR, "Bin name already exists", true)
+                    Button(
+                        onClick = {
+                            if (binName.isNotBlank()) {
+                                val allBins = databaseHelper.getAllBins()
+                                val isNameDuplicate = allBins.any { it.name.equals(binName, ignoreCase = true) && it.id != bin.id }
+
+                                if (isNameDuplicate) {
+                                    flashMessage = FlashMessage(FlashMessageType.ERROR, "Bin name already exists", true)
+                                } else {
+                                    val updatedBin = bin.copy(
+                                        name = binName,
+                                        latitude = binLatitude,
+                                        longitude = binLongitude
+                                    )
+                                    onEditBinSuccess(updatedBin)
+                                    onDismiss()
+                                    flashMessage = FlashMessage(FlashMessageType.SUCCESS, "Bin updated successfully", true)
+                                }
                             } else {
-                                val updatedBin = bin.copy(
-                                    name = binName,
-                                    latitude = binLatitude,
-                                    longitude = binLongitude
-                                )
-                                onEditBinSuccess(updatedBin)
-                                onDismiss()
-                                flashMessage = FlashMessage(FlashMessageType.SUCCESS, "Bin updated successfully", true)
+                                flashMessage = FlashMessage(FlashMessageType.WARNING, "Please fill all details", true)
                             }
-                        } else {
-                            flashMessage = FlashMessage(FlashMessageType.WARNING, "Please fill all details", true)
-                        }
-                    }) {
-                        Text("Save Changes")
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF33691E))
+                    ) {
+                        Text("Save Changes", color = Color.White)
                     }
                 }
+
             }
         }
     }
 }
-
-
-
 
 data class ChartEntry(val index: Float, val value: Float, val timestamp: Long)
 

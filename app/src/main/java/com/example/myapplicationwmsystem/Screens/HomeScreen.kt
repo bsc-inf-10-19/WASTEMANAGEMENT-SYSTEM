@@ -1,9 +1,12 @@
 package com.example.myapplicationwmsystem.Screens
 
 import MapScreen
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.TabRowDefaults.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -16,6 +19,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplicationwmsystem.AddBinDialog
@@ -81,33 +85,66 @@ fun HomeScreen(
             }
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White),
+                containerColor = Color.White,
+                contentColor = Color.Gray,
+                tonalElevation = 0.dp
+            ) {
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
                     label = { Text("Home") },
                     selected = selectedItem == 0,
-                    onClick = { selectedItem = 0 }
+                    onClick = { selectedItem = 0 },
+                    alwaysShowLabel = true,
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF33691E),
+                        selectedTextColor = Color(0xFF33691E),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray,
+                        indicatorColor = Color.Transparent
+                    )
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.Search, contentDescription = "Search") },
                     label = { Text("Search") },
                     selected = selectedItem == 1,
-                    onClick = { selectedItem = 1 }
+                    onClick = { selectedItem = 1 },
+                    alwaysShowLabel = true,
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF33691E),
+                        selectedTextColor = Color(0xFF33691E),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray,
+                        indicatorColor = Color.Transparent
+                    )
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Filled.LocationOn, contentDescription = "Bin Locations") },
                     label = { Text("Bin Locations") },
                     selected = selectedItem == 2,
-                    onClick = { selectedItem = 2 }
+                    onClick = { selectedItem = 2 },
+                    alwaysShowLabel = true,
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFF33691E),
+                        selectedTextColor = Color(0xFF33691E),
+                        unselectedIconColor = Color.Gray,
+                        unselectedTextColor = Color.Gray,
+                        indicatorColor = Color.Transparent
+                    )
                 )
             }
         },
         floatingActionButton = {
             if (selectedItem == 0) {
                 FloatingActionButton(
-                    onClick = { showDialog = true }
+                    onClick = { showDialog = true },
+                    containerColor = Color(0xFF33691E),
+                    shape = CircleShape
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add Bin")
+                    Icon(Icons.Filled.Add, contentDescription = "Add Bin", tint = Color.White)
                 }
             }
         },
